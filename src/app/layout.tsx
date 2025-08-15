@@ -1,34 +1,64 @@
 'use client';
-import { Geist, Geist_Mono } from 'next/font/google';
+
+import { ReactNode, useMemo, useState, memo } from 'react';
+import { CedarCopilot } from 'cedar-os';
+import type { ProviderConfig } from 'cedar-os';
+
+import { Mail } from 'lucide-react';
+import { Header } from './layout/Header';
+import { Sidebar } from './layout/Sidebar';
+import { ComposeManager } from './drafts/ComposeManager';
+import { usePathname } from 'next/navigation';
+import { SidePanelCedarChat } from '@/app/cedar-os/components/chatComponents/SidePanelCedarChat';
 import './globals.css';
-import { CedarCopilot, ProviderConfig } from 'cedar-os';
 
-const geistSans = Geist({
-  variable: '--font-geist-sans',
-  subsets: ['latin'],
-});
+function RootLayout({ children }: { children: ReactNode }) {
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const pathname = usePathname();
 
-const geistMono = Geist_Mono({
-  variable: '--font-geist-mono',
-  subsets: ['latin'],
-});
+  const isDetailRoute = useMemo(
+    () => pathname?.includes('/inbox/') && pathname !== '/inbox',
+    [pathname],
+  );
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
-  const llmProvider: ProviderConfig = {
-    provider: 'mastra' as const,
-    baseURL: process.env.NEXT_PUBLIC_MASTRA_URL || 'http://localhost:4111',
-  };
+  const llmProvider = useMemo<ProviderConfig>(
+    () => ({
+      provider: 'mastra',
+      baseURL: process.env.NEXT_PUBLIC_MASTRA_URL || 'http://localhost:4112',
+      apiKey: process.env.NEXT_PUBLIC_MASTRA_API_KEY,
+    }),
+    [],
+  );
 
   return (
     <html lang="en">
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        {/* [STEP 1]: We register the main CedarCopilot wrapper at the root of the app with a Mastra provider. */}
-        <CedarCopilot llmProvider={llmProvider}>{children}</CedarCopilot>
+      <body>
+        <CedarCopilot llmProvider={llmProvider}>
+          <SidePanelCedarChat
+            side="right"
+            title="Email Assistant"
+            collapsedLabel="Need help with your emails?"
+            showCollapsedButton={true}
+            companyLogo={<Mail className="w-6 h-6 text-blue-600" />}
+            dimensions={{ width: 400, minWidth: 350, maxWidth: 600 }}
+            resizable={true}
+            className="z-50"
+          >
+            <div className="relative h-screen flex flex-col bg-white dark:bg-gray-900">
+              <Header onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
+              <div className="relative flex-1 flex overflow-hidden">
+                <Sidebar isOpen={sidebarOpen} />
+                <main className="flex-1 flex flex-col bg-gray-50 dark:bg-gray-950 p-2">
+                  {children}
+                </main>
+              </div>
+              {/* Always render compose manager but hide inline compose on detail routes */}
+              <ComposeManager hideInlineCompose={isDetailRoute} />
+            </div>
+          </SidePanelCedarChat>
+        </CedarCopilot>
       </body>
     </html>
   );
 }
+export default memo(RootLayout);
