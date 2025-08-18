@@ -8,10 +8,25 @@ import {
 import Flat3dContainer from '@/app/cedar-os/components/containers/Flat3dContainer';
 import ColouredContainer from '@/app/cedar-os/components/structural/ColouredContainer';
 import ColouredContainerItem from '@/app/cedar-os/components/structural/ColouredContainerItem';
-import { CheckCircle, Circle, Clock } from 'lucide-react';
-import { itemVariants } from '@/app/cedar-os/components/structural/animationVariants';
+import {
+	CheckCircle,
+	Circle,
+	Clock,
+	User,
+	Search,
+	Calendar,
+	ChevronDown,
+	Copy,
+} from 'lucide-react';
+import {
+	itemVariants,
+	containerVariants,
+} from '@/app/cedar-os/components/structural/animationVariants';
 import { motion } from 'motion/react';
 import { ShimmerText } from '@/app/cedar-os/components/text/ShimmerText';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { useState } from 'react';
 //
 // ------------------------------------------------
 // Helpers
@@ -191,7 +206,7 @@ export const toolResultMessageRenderer: MessageRenderer<CustomToolMessage> = {
 					<motion.div
 						variants={itemVariants}
 						className='flex items-center justify-between mb-2'>
-						<div className='flex items-center gap-3'>
+						<div className='flex items-center gap-2'>
 							<div className='rounded-2xl bg-blue-500/10 backdrop-blur-sm'>
 								<Clock className='w-6 h-6 text-blue-500' />
 							</div>
@@ -207,17 +222,22 @@ export const toolResultMessageRenderer: MessageRenderer<CustomToolMessage> = {
 						)}
 					</motion.div>
 
-					{result.availableTimes.map((t: string, idx: number) => (
-						<ColouredContainer
-							key={idx}
-							color='blue'
-							className='text-sm w-full'>
-							<div className='flex items-center gap-2'>
-								<Clock size={16} className='text-blue-600 flex-shrink-0' />
-								<span className=''>{formatDateTime(t)}</span>
-							</div>
-						</ColouredContainer>
-					))}
+					<motion.div
+						variants={containerVariants}
+						initial='hidden'
+						animate='visible'
+						className='space-y-3'>
+						{result.availableTimes.map((t: string, idx: number) => (
+							<motion.div key={idx} variants={itemVariants}>
+								<ColouredContainer color='blue' className='text-sm w-full'>
+									<div className='flex items-center gap-2'>
+										<Clock size={16} className='text-blue-600 flex-shrink-0' />
+										<span className=''>{formatDateTime(t)}</span>
+									</div>
+								</ColouredContainer>
+							</motion.div>
+						))}
+					</motion.div>
 				</div>
 			);
 		}
@@ -225,39 +245,81 @@ export const toolResultMessageRenderer: MessageRenderer<CustomToolMessage> = {
 		if (isPersonResult(result)) {
 			// Person search tool result
 			return (
-				<div className='text-sm space-y-2'>
-					{result.name && (
-						<div>
-							<span className='font-medium'>Name: </span>
-							<span>{result.name}</span>
+				<ColouredContainer color='purple' className='space-y-4'>
+					{/* Header row with avatar, name, and role badge */}
+					<div className='flex items-center justify-between'>
+						<div className='flex items-center gap-2'>
+							{/* Real avatar */}
+							<img
+								src='https://i.pravatar.cc/150?u=jane'
+								alt='Avatar'
+								className='w-6 h-6 rounded-full object-cover'
+							/>
+							{/* Name */}
+							{result.name && (
+								<div className='font-semibold text-base'>{result.name}</div>
+							)}
 						</div>
-					)}
-					{result.role && (
-						<div>
-							<span className='font-medium'>Role: </span>
-							<span>{result.role}</span>
-						</div>
-					)}
+						{/* Role badge */}
+						{result.role && (
+							<Badge
+								variant='secondary'
+								className='bg-purple-100 text-purple-800 border-purple-200'>
+								{result.role}
+							</Badge>
+						)}
+					</div>
+
+					{/* Email style */}
 					{result.emailStyleSummary && (
-						<div>
-							<span className='font-medium'>Email style: </span>
-							<span>{result.emailStyleSummary}</span>
+						<div className='space-y-1 mt-2.5'>
+							<div className='font-medium text-sm text-black'>Email Style</div>
+							<div className='text-sm text-gray-700'>
+								{result.emailStyleSummary}
+							</div>
 						</div>
 					)}
+
+					{/* Notes */}
 					{Array.isArray(result.notes) && result.notes.length > 0 && (
-						<div>
-							<div className='font-medium mb-1'>Notes</div>
-							<ul className='list-disc pl-5 space-y-1'>
+						<div className='mt-2.5'>
+							<div className='font-medium text-sm text-black'>Notes</div>
+							<ul className='space-y-1'>
 								{result.notes.map((n: string, idx: number) => (
-									<li key={idx}>{n}</li>
+									<li
+										key={idx}
+										className='text-sm text-gray-700 flex items-start gap-2'>
+										<div className='w-1.5 h-1.5 rounded-full bg-purple-400 mt-2 flex-shrink-0' />
+										{n}
+									</li>
 								))}
 							</ul>
 						</div>
 					)}
-					{toolName && (
-						<div className='text-xs text-gray-500'>Source: {toolName}</div>
-					)}
-				</div>
+
+					{/* Action buttons */}
+					<div className='flex gap-2 pt-3 w-full'>
+						<Button
+							variant='outline'
+							size='sm'
+							className='flex items-center gap-2 text-xs'>
+							<Search className='w-3 h-3' />
+							Search prev emails
+						</Button>
+						<Button
+							variant='outline'
+							size='sm'
+							className='flex items-center gap-2 text-xs'>
+							<Calendar className='w-3 h-3' />
+							Open calendar
+						</Button>
+					</div>
+
+					{/* Source info */}
+					{/* {toolName && (
+						<div className='text-xs text-gray-500 pt-2'>Source: {toolName}</div>
+					)} */}
+				</ColouredContainer>
 			);
 		}
 	},
@@ -315,10 +377,57 @@ export const actionResultMessageRenderer: MessageRenderer<ActionResultMessage> =
 	{
 		type: 'action',
 		render: (message) => {
+			const [isExpanded, setIsExpanded] = useState(false);
+
 			switch (message.setterKey) {
 				case 'draftReply':
+					const emailContent = message.args[0];
+					const previewLines = emailContent.split('\n').slice(0, 3).join('\n');
+					const displayContent = isExpanded
+						? emailContent
+						: previewLines + (emailContent.split('\n').length > 3 ? '...' : '');
+
 					return (
-						<div>Drafted email: {message.args[0].slice(0, 100) + '...'}</div>
+						<div
+							className='relative group rounded-lg overflow-hidden w-full'
+							style={{
+								backgroundColor: '#1e1e1e',
+								border: '1px solid rgba(255, 255, 255, 0.1)',
+							}}>
+							<div
+								className='flex items-center justify-between px-4 py-2 text-xs bg-[#2d2d2d] w-full'
+								style={{
+									borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+									color: '#888',
+								}}>
+								<span className='font-mono'>Email Draft</span>
+								<div className='flex items-center gap-2'>
+									<button
+										onClick={() => navigator.clipboard.writeText(emailContent)}
+										className='flex items-center gap-1 px-2 py-1 rounded hover:bg-white/10 transition-colors'
+										style={{ color: '#888' }}>
+										<Copy className='w-3 h-3' />
+										<span>Copy</span>
+									</button>
+									<button
+										onClick={() => setIsExpanded(!isExpanded)}
+										className='flex items-center gap-1 px-2 py-1 rounded hover:bg-white/10 transition-colors'
+										style={{ color: '#888' }}>
+										<ChevronDown
+											className={`w-3 h-3 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
+										/>
+										<span>{isExpanded ? 'Collapse' : 'Expand'}</span>
+									</button>
+								</div>
+							</div>
+							<div className='p-4 overflow-x-auto w-full'>
+								<div
+									className='text-sm whitespace-pre-wrap w-full'
+									style={{ color: 'white' }}>
+									{displayContent}
+								</div>
+							</div>
+						</div>
 					);
 				default:
 					return <div>Executed setter: {message.setterKey}</div>;

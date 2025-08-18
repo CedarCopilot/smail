@@ -53,7 +53,7 @@ export default function ColouredContainerItem({
 			<motion.div
 				variants={itemVariants}
 				className='flex items-center justify-between mb-2'>
-				<div className='flex items-center gap-3'>
+				<div className='flex items-center gap-2'>
 					<div
 						className={`rounded-2xl ${getIconBgClass(color)} backdrop-blur-sm`}>
 						<Icon className={`w-6 h-6 ${getIconColorClass(color)}`} />
