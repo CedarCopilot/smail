@@ -17,6 +17,8 @@ import { useEmailStore } from '@/app/store/emailStore';
 import { EmailAddress } from '@/app/types';
 import { useRegisterState, useCedarStore } from 'cedar-os';
 import type { ComposeEmailData } from '@/app/types';
+import { AnimatePresence } from 'motion/react';
+import PhantomText from '@/app/cedar-os/components/text/PhantomText';
 
 interface ComposeEmailProps {
 	draftId: string;
@@ -39,6 +41,10 @@ export function ComposeEmail({ draftId, inline = false }: ComposeEmailProps) {
 	const [showCc, setShowCc] = useState(false);
 	const [showBcc, setShowBcc] = useState(false);
 	const bodyRef = useRef<HTMLTextAreaElement>(null);
+
+	// State for slider control
+	const [isSliderActive, setIsSliderActive] = useState(false);
+	const [phantomWordCount, setPhantomWordCount] = useState(50);
 
 	// Memoize custom setters to avoid config identity changes on each render
 	const draftReplySetters = useMemo(
@@ -76,6 +82,25 @@ export function ComposeEmail({ draftId, inline = false }: ComposeEmailProps) {
 	const cedarDraft = useCedarStore((state) =>
 		state.getCedarState('emailDraft')
 	) as Partial<ComposeEmailData>;
+
+	// Subscribe to slider state (don't register it here, it's registered globally)
+	const sliderState = useCedarStore((state) =>
+		state.getCedarState('draftSliderState')
+	) as { isActive: boolean; wordCount: number } | undefined;
+
+	// Update local state when Cedar slider state changes
+	useEffect(() => {
+		if (sliderState) {
+			// Only update if values actually changed to prevent loops
+			if (sliderState.isActive !== isSliderActive) {
+				setIsSliderActive(sliderState.isActive);
+			}
+			if (sliderState.wordCount !== phantomWordCount) {
+				setPhantomWordCount(sliderState.wordCount);
+			}
+		}
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [sliderState?.isActive, sliderState?.wordCount]); // Use specific deps instead of whole object
 
 	useEffect(() => {
 		if (draft && !draft.isMinimized && bodyRef.current) {
@@ -292,16 +317,28 @@ export function ComposeEmail({ draftId, inline = false }: ComposeEmailProps) {
 					</div>
 
 					{/* Body */}
-					<div className={`flex-1 p-4 ${inline ? 'min-h-[200px]' : ''}`}>
-						<textarea
-							ref={bodyRef}
-							value={draft.data.body || ''}
-							onChange={(e) =>
-								updateComposeDraftData(draftId, { body: e.target.value })
-							}
-							placeholder='Compose email'
-							className='w-full h-full bg-transparent outline-none resize-none text-sm'
-						/>
+					<div
+						className={`flex-1 p-4 ${inline ? 'min-h-[200px]' : ''} relative`}>
+						<AnimatePresence mode='wait'>
+							{isSliderActive ? (
+								<PhantomText
+									key='phantom'
+									wordCount={phantomWordCount}
+									className='text-sm leading-relaxed'
+								/>
+							) : (
+								<textarea
+									key='textarea'
+									ref={bodyRef}
+									value={draft.data.body || ''}
+									onChange={(e) =>
+										updateComposeDraftData(draftId, { body: e.target.value })
+									}
+									placeholder='Compose email'
+									className='w-full h-full bg-transparent outline-none resize-none text-sm'
+								/>
+							)}
+						</AnimatePresence>
 					</div>
 
 					{/* Footer */}
