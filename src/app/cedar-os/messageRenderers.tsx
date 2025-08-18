@@ -27,6 +27,17 @@ import { ShimmerText } from '@/app/cedar-os/components/text/ShimmerText';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useState } from 'react';
+
+// ------------------------------------------------
+// Interfaces
+// ------------------------------------------------
+
+export interface ProgressEvent {
+	type: 'progress_update';
+	state: 'in_progress' | 'complete';
+	text: string;
+}
+
 //
 // ------------------------------------------------
 // Helpers
@@ -435,9 +446,42 @@ export const actionResultMessageRenderer: MessageRenderer<ActionResultMessage> =
 		},
 	};
 
+// ------------------------------------------------
+// PROGRESS UPDATE RENDERING
+// ------------------------------------------------
+
+type CustomProgressMessage = CustomMessage<
+	'progress_update',
+	{
+		type: 'progress_update';
+		state?: 'in_progress' | 'complete';
+		text?: string;
+	}
+>;
+
+// Render progress update messages (same as tool-call)
+export const progressUpdateMessageRenderer: MessageRenderer<CustomProgressMessage> =
+	{
+		type: 'progress_update',
+		render: (message) => {
+			const text = message.text || 'Working...';
+			const state = message.state || 'in_progress';
+
+			// Map progress state to ShimmerText state
+			const shimmerState = state === 'complete' ? 'complete' : 'in_progress';
+
+			return (
+				<ColouredContainer color='grey' className='my-2'>
+					<ShimmerText text={text} state={shimmerState} />
+				</ColouredContainer>
+			);
+		},
+	};
+
 // Export all message renderers to register with Cedar OS
 export const messageRenderers = [
 	toolCallMessageRenderer,
 	toolResultMessageRenderer,
 	actionResultMessageRenderer,
+	progressUpdateMessageRenderer,
 ] as MessageRenderer<Message>[];
