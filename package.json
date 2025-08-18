@@ -19,6 +19,7 @@
 		"cedar-os": "^0.0.294",
 		"class-variance-authority": "^0.7.1",
 		"clsx": "^2.1.1",
+		"diff": "^8.0.2",
 		"framer-motion": "^12.23.11",
 		"lucide-react": "^0.532.0",
 		"motion": "^12.23.12",
@@ -35,6 +36,7 @@
 	"devDependencies": {
 		"@eslint/eslintrc": "^3",
 		"@tailwindcss/postcss": "^4",
+		"@types/diff": "^8.0.0",
 		"@types/node": "^20",
 		"@types/react": "^19",
 		"@types/react-dom": "^19",

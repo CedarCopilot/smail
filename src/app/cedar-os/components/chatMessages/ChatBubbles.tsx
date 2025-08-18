@@ -87,29 +87,6 @@ export const ChatBubbles: React.FC<ChatBubblesProps> = ({
 							<ChatRenderer message={message} />
 						</motion.div>
 					))}
-					{isProcessing && (
-						<motion.div
-							key='typing-indicator'
-							initial={{ opacity: 0, y: 10 }}
-							animate={{ opacity: 1, y: 0 }}
-							exit={{ opacity: 0, y: -10 }}
-							transition={{ duration: 0.2 }}
-							layout
-							className='px-2 flex justify-start my-4'>
-							<div
-								className='py-1 px-1 rounded-lg text-sm rounded-tl-sm'
-								style={{
-									backgroundColor: desaturateColor(styling.color || '#f1f5f9'),
-									color: styling.accentColor || '#000000',
-								}}>
-								<div className='flex space-x-1'>
-									<div className='w-1.5 h-1.5 rounded-full bg-gray-500 animate-pulse'></div>
-									<div className='w-1.5 h-1.5 rounded-full bg-gray-500 animate-pulse delay-100'></div>
-									<div className='w-1.5 h-1.5 rounded-full bg-gray-500 animate-pulse delay-200'></div>
-								</div>
-							</div>
-						</motion.div>
-					)}
 				</AnimatePresence>
 			</div>
 		</div>

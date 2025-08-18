@@ -1,31 +1,20 @@
 import {
-	MessageRenderer,
-	CustomMessage,
-	MastraStreamedResponse,
-	ActionMessageFor,
-	Message,
-} from 'cedar-os';
-import Flat3dContainer from '@/app/cedar-os/components/containers/Flat3dContainer';
-import ColouredContainer from '@/app/cedar-os/components/structural/ColouredContainer';
-import ColouredContainerItem from '@/app/cedar-os/components/structural/ColouredContainerItem';
-import {
-	CheckCircle,
-	Circle,
-	Clock,
-	User,
-	Search,
-	Calendar,
-	ChevronDown,
-	Copy,
-} from 'lucide-react';
-import {
-	itemVariants,
 	containerVariants,
+	itemVariants,
 } from '@/app/cedar-os/components/structural/animationVariants';
-import { motion } from 'motion/react';
+import ColouredContainer from '@/app/cedar-os/components/structural/ColouredContainer';
 import { ShimmerText } from '@/app/cedar-os/components/text/ShimmerText';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import {
+	ActionMessageFor,
+	CustomMessage,
+	MastraStreamedResponse,
+	Message,
+	MessageRenderer,
+} from 'cedar-os';
+import { Calendar, ChevronDown, Clock, Copy, Search } from 'lucide-react';
+import { motion } from 'motion/react';
 import { useState } from 'react';
 
 // ------------------------------------------------
