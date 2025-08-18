@@ -12,7 +12,7 @@ export async function handleScheduleMeeting(c: Context) {
 				stateKey: 'emailDraft',
 				setterKey: 'draftReply',
 				args: [
-					'Dear [Recipient Name],\n\nI hope this email finds you well. I would like to schedule a meeting to discuss [topic]. Would you be available next week for a 30-minute conversation?\n\nPlease let me know what times work best for your schedule.\n\nBest regards,\n[Your Name]',
+					'Dear Avery Chen,\n\nI hope this email finds you well. I would like to schedule a meeting to discuss these security issues. Would you be available next week for a 30-minute conversation?\n\nPlease let me know what times work best for your schedule.\n\nBest regards,\nJesse',
 					"Meeting Request - Let's Schedule a Time",
 				],
 			});

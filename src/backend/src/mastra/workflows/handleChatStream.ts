@@ -10,7 +10,9 @@ export async function handleChatStream(c: Context) {
 
 		return createSSEStream(async (controller) => {
 			const run = await emailWorkflow.createRunAsync();
-			const result = await run.start(createWorkflowInput(inputData, controller));
+			const result = await run.start(
+				createWorkflowInput(inputData, controller)
+			);
 
 			if (result.status !== 'success') {
 				throw new Error(`Workflow failed: ${result.status}`);

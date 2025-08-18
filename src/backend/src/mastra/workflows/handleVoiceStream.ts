@@ -11,7 +11,7 @@ export async function handleVoiceStream(c: Context) {
 		const audioFile = form.get('audio') as File;
 		const additionalContext = form.get('context') as string | null;
 		let parsedAdditionalContext: unknown = undefined;
-		
+
 		if (additionalContext) {
 			try {
 				parsedAdditionalContext = JSON.parse(additionalContext);
@@ -19,7 +19,7 @@ export async function handleVoiceStream(c: Context) {
 				// leave undefined if not valid JSON
 			}
 		}
-		
+
 		if (!audioFile) return c.json({ error: 'audio required' }, 400);
 
 		const buf = Buffer.from(await audioFile.arrayBuffer());
@@ -35,16 +35,22 @@ export async function handleVoiceStream(c: Context) {
 			});
 
 			const run = await emailWorkflow.createRunAsync();
-			const result = await run.start(createWorkflowInput({
-				prompt: transcription,
-				additionalContext: parsedAdditionalContext ?? additionalContext,
-				temperature: undefined,
-				maxTokens: undefined,
-				systemPrompt: undefined,
-				resourceId: undefined,
-				threadId: undefined,
-			}, controller, true));
-			
+			const result = await run.start(
+				createWorkflowInput(
+					{
+						prompt: transcription,
+						additionalContext: parsedAdditionalContext ?? additionalContext,
+						temperature: undefined,
+						maxTokens: undefined,
+						systemPrompt: undefined,
+						resourceId: undefined,
+						threadId: undefined,
+					},
+					controller,
+					true
+				)
+			);
+
 			if (result.status !== 'success') {
 				throw new Error(`Workflow failed: ${result.status}`);
 			}

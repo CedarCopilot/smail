@@ -13,10 +13,6 @@ export async function handleRewriteDraft(c: Context) {
 			rangeContext,
 			temperature,
 			maxTokens,
-			systemPrompt,
-			resourceId,
-			threadId,
-			additionalContext,
 		} = body;
 
 		return createSSEStream(async (controller) => {

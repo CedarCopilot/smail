@@ -236,7 +236,11 @@ export function useSmailCedarSpells() {
 		});
 
 		// Get current compose draft if available
-		const { composeData, isComposeOpen } = useEmailStore.getState();
+		const { isComposeOpen, composeDrafts } = useEmailStore.getState();
+
+		const composeData = composeDrafts.find(
+			(d) => d.data.body !== undefined && d.data.body.length > 0
+		)?.data;
 
 		// Determine current draft source
 		const currentDraft = {
