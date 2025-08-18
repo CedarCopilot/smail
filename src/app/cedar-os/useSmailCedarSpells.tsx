@@ -300,17 +300,35 @@ export function useSmailCedarSpells() {
 			wordCount: value,
 		});
 
-		// Get current compose draft if available
-		const { composeData, isComposeOpen } = useEmailStore.getState();
+		const emaildata = useEmailStore.getState();
+		const { isComposeOpen, composeData, composeDrafts } = emaildata;
 
-		// Determine current draft source
-		const currentDraft = {
-			subject: composeData?.subject || '',
-			body: composeData?.body || '',
+		// Check for active compose draft - either in legacy composeData or in composeDrafts
+		let currentDraft = {
+			subject: '',
+			body: '',
 		};
 
+		// First check if there's a draft in composeDrafts with content
+		const activeDraft = composeDrafts.find(
+			(draft) => draft.data.body && draft.data.body.length > 0
+		);
+
+		if (activeDraft) {
+			currentDraft = {
+				subject: activeDraft.data.subject || '',
+				body: activeDraft.data.body || '',
+			};
+		} else if (isComposeOpen && composeData) {
+			// Fall back to legacy compose if no active draft found
+			currentDraft = {
+				subject: composeData.subject || '',
+				body: composeData.body || '',
+			};
+		}
+
 		// Only proceed if there's content to rewrite
-		if (isComposeOpen) {
+		if (currentDraft.body || currentDraft.subject) {
 			// Get the selected option
 			const selectedOption = wordCountOptions[optionIndex];
 			const rangeName = selectedOption.text.replace(
@@ -331,6 +349,7 @@ export function useSmailCedarSpells() {
 			});
 		} else {
 			// No active draft to rewrite
+			console.log('No active draft found to rewrite');
 		}
 	};
 
@@ -344,20 +363,35 @@ export function useSmailCedarSpells() {
 		});
 
 		// Get current compose draft if available
-		const { isComposeOpen, composeDrafts } = useEmailStore.getState();
+		const emaildata = useEmailStore.getState();
+		const { isComposeOpen, composeData, composeDrafts } = emaildata;
 
-		const composeData = composeDrafts.find(
-			(d) => d.data.body !== undefined && d.data.body.length > 0
-		)?.data;
-
-		// Determine current draft source
-		const currentDraft = {
-			subject: composeData?.subject || '',
-			body: composeData?.body || '',
+		// Check for active compose draft - either in legacy composeData or in composeDrafts
+		let currentDraft = {
+			subject: '',
+			body: '',
 		};
 
+		// First check if there's a draft in composeDrafts with content
+		const activeDraft = composeDrafts.find(
+			(draft) => draft.data.body && draft.data.body.length > 0
+		);
+
+		if (activeDraft) {
+			currentDraft = {
+				subject: activeDraft.data.subject || '',
+				body: activeDraft.data.body || '',
+			};
+		} else if (isComposeOpen && composeData) {
+			// Fall back to legacy compose if no active draft found
+			currentDraft = {
+				subject: composeData.subject || '',
+				body: composeData.body || '',
+			};
+		}
+
 		// Only proceed if there's content to rewrite
-		if (isComposeOpen) {
+		if (currentDraft.body || currentDraft.subject) {
 			// Find the appropriate range context
 			const range = wordCountRanges.find(
 				(r) => value >= r.min && value <= r.max
@@ -381,6 +415,7 @@ export function useSmailCedarSpells() {
 			});
 		} else {
 			// No active draft to rewrite
+			console.log('No active draft found to rewrite');
 		}
 	};
 
