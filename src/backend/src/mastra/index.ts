@@ -6,15 +6,15 @@ import { emailAgent } from './agents/emailAgent';
 
 // Create Mastra instance
 export const mastra = new Mastra({
-  agents: { emailAgent },
-  workflows: { emailWorkflow },
-  storage: new LibSQLStore({
-    url: ':memory:',
-  }),
-  telemetry: {
-    enabled: true,
-  },
-  server: {
-    apiRoutes,
-  },
+	agents: { emailAgent },
+	workflows: { emailWorkflow },
+	storage: new LibSQLStore({
+		url: ':memory:',
+	}),
+	telemetry: {
+		enabled: true,
+	},
+	server: {
+		apiRoutes,
+	},
 });

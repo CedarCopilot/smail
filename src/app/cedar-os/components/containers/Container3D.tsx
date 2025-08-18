@@ -53,14 +53,14 @@ const Container3D: React.FC<Container3DProps> = ({
 					'-6px 10px 8px 0px rgba(0,0,0,0.4)',
 					'-2px 4px 3px 0px rgba(0,0,0,0.3)',
 					'-1px 2px 3px 0px rgba(255,255,255,0.05) inset',
-			  ].join(', ')
+				].join(', ')
 			: [
 					`0px 2px 0px 0px ${getShadedColor(shadeBase, 50)}`,
 					'-12px 18px 16px 0px rgba(0,0,0,0.14)',
 					'-6px 10px 8px 0px rgba(0,0,0,0.14)',
 					'-2px 4px 3px 0px rgba(0,0,0,0.15)',
 					'-1px 2px 3px 0px rgba(0,0,0,0.12) inset',
-			  ].join(', '),
+				].join(', '),
 		willChange: 'transform, backdrop-filter',
 		transform: 'translateZ(0)',
 	};

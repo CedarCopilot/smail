@@ -193,7 +193,7 @@ const generateMockEmails = (): Email[] => {
 								size: 1024 * 1024 * Math.random() * 10,
 								mimeType: 'application/pdf',
 							},
-					  ]
+						]
 					: undefined,
 		});
 	}

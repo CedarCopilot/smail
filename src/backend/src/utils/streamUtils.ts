@@ -9,36 +9,38 @@ import type { Readable } from 'stream';
  * All other content goes through 'data:' field only.
  */
 export function createSSEStream(
-  cb: (controller: ReadableStreamDefaultController<Uint8Array>) => Promise<void>,
+	cb: (controller: ReadableStreamDefaultController<Uint8Array>) => Promise<void>
 ): Response {
-  const encoder = new TextEncoder();
+	const encoder = new TextEncoder();
 
-  const stream = new ReadableStream<Uint8Array>({
-    async start(controller) {
-      try {
-        await cb(controller);
-        // Signal completion with empty data
-        controller.enqueue(encoder.encode('event: done\n'));
-        controller.enqueue(encoder.encode('data:\n\n'));
-      } catch (err) {
-        console.error('Error during SSE stream', err);
+	const stream = new ReadableStream<Uint8Array>({
+		async start(controller) {
+			try {
+				await cb(controller);
+				// Signal completion with empty data
+				controller.enqueue(encoder.encode('event: done\n'));
+				controller.enqueue(encoder.encode('data:\n\n'));
+			} catch (err) {
+				console.error('Error during SSE stream', err);
 
-        const message = err instanceof Error ? err.message : 'Internal error';
-        controller.enqueue(encoder.encode('data: '));
-        controller.enqueue(encoder.encode(`${JSON.stringify({ type: 'error', message })}\n\n`));
-      } finally {
-        controller.close();
-      }
-    },
-  });
+				const message = err instanceof Error ? err.message : 'Internal error';
+				controller.enqueue(encoder.encode('data: '));
+				controller.enqueue(
+					encoder.encode(`${JSON.stringify({ type: 'error', message })}\n\n`)
+				);
+			} finally {
+				controller.close();
+			}
+		},
+	});
 
-  return new Response(stream, {
-    headers: {
-      'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache',
-      Connection: 'keep-alive',
-    },
-  });
+	return new Response(stream, {
+		headers: {
+			'Content-Type': 'text/event-stream',
+			'Cache-Control': 'no-cache',
+			Connection: 'keep-alive',
+		},
+	});
 }
 
 /**
@@ -46,12 +48,12 @@ export function createSSEStream(
  * Used for actions, tool responses, custom events, etc.
  */
 export function streamJSONEvent<T>(
-  controller: ReadableStreamDefaultController<Uint8Array>,
-  eventData: T,
+	controller: ReadableStreamDefaultController<Uint8Array>,
+	eventData: T
 ) {
-  const encoder = new TextEncoder();
-  controller.enqueue(encoder.encode('data: '));
-  controller.enqueue(encoder.encode(`${JSON.stringify(eventData)}\n\n`));
+	const encoder = new TextEncoder();
+	controller.enqueue(encoder.encode('data: '));
+	controller.enqueue(encoder.encode(`${JSON.stringify(eventData)}\n\n`));
 }
 
 /**
@@ -59,22 +61,22 @@ export function streamJSONEvent<T>(
  * Compatible with new frontend parser that expects plain text chunks.
  */
 export async function handleTextStream(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  streamResult: StreamTextResult<any, any>,
-  streamController: ReadableStreamDefaultController<Uint8Array>,
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	streamResult: StreamTextResult<any, any>,
+	streamController: ReadableStreamDefaultController<Uint8Array>
 ): Promise<string> {
-  const encoder = new TextEncoder();
-  const chunks: string[] = [];
+	const encoder = new TextEncoder();
+	const chunks: string[] = [];
 
-  // Stream raw text chunks through data field
-  for await (const chunk of streamResult.textStream) {
-    chunks.push(chunk);
-    // Escape literal newlines for SSE compliance
-    const escaped = chunk.replace(/\n/g, '\\n');
-    streamController.enqueue(encoder.encode(`data:${escaped}\n\n`));
-  }
+	// Stream raw text chunks through data field
+	for await (const chunk of streamResult.textStream) {
+		chunks.push(chunk);
+		// Escape literal newlines for SSE compliance
+		const escaped = chunk.replace(/\n/g, '\\n');
+		streamController.enqueue(encoder.encode(`data:${escaped}\n\n`));
+	}
 
-  return chunks.join('');
+	return chunks.join('');
 }
 
 /**
@@ -82,41 +84,44 @@ export async function handleTextStream(
  * The speak function should return a NodeJS.ReadableStream of audio data.
  */
 export async function streamAudioFromText(
-  controller: ReadableStreamDefaultController<Uint8Array>,
-  // Accept either Node.js Readable or Web ReadableStream for broader compatibility
-  speakFn: (text: string, options?: Record<string, unknown>) => Promise<Readable | ReadableStream>,
-  text: string,
-  options: { voice?: string; speed?: number; eventType?: string } = {},
+	controller: ReadableStreamDefaultController<Uint8Array>,
+	// Accept either Node.js Readable or Web ReadableStream for broader compatibility
+	speakFn: (
+		text: string,
+		options?: Record<string, unknown>
+	) => Promise<Readable | ReadableStream>,
+	text: string,
+	options: { voice?: string; speed?: number; eventType?: string } = {}
 ) {
-  const { voice = 'alloy', speed = 1.0, eventType = 'audio' } = options;
-  const speechStream = await speakFn(text, { voice, speed });
+	const { voice = 'alloy', speed = 1.0, eventType = 'audio' } = options;
+	const speechStream = await speakFn(text, { voice, speed });
 
-  // Convert stream to buffer for response (support Web ReadableStream and Node Readable)
-  let audioResponse: Buffer;
-  if (typeof (speechStream as ReadableStream).getReader === 'function') {
-    // Web ReadableStream
-    const reader = (speechStream as ReadableStream).getReader();
-    const parts: Uint8Array[] = [];
-    for (;;) {
-      const { value, done } = await reader.read();
-      if (done) break;
-      if (value) parts.push(value);
-    }
-    audioResponse = Buffer.concat(parts.map((u8) => Buffer.from(u8)));
-  } else {
-    // Node Readable
-    const chunks: Buffer[] = [];
-    for await (const chunk of speechStream as unknown as Readable) {
-      chunks.push(Buffer.from(chunk as Buffer));
-    }
-    audioResponse = Buffer.concat(chunks);
-  }
+	// Convert stream to buffer for response (support Web ReadableStream and Node Readable)
+	let audioResponse: Buffer;
+	if (typeof (speechStream as ReadableStream).getReader === 'function') {
+		// Web ReadableStream
+		const reader = (speechStream as ReadableStream).getReader();
+		const parts: Uint8Array[] = [];
+		for (;;) {
+			const { value, done } = await reader.read();
+			if (done) break;
+			if (value) parts.push(value);
+		}
+		audioResponse = Buffer.concat(parts.map((u8) => Buffer.from(u8)));
+	} else {
+		// Node Readable
+		const chunks: Buffer[] = [];
+		for await (const chunk of speechStream as unknown as Readable) {
+			chunks.push(Buffer.from(chunk as Buffer));
+		}
+		audioResponse = Buffer.concat(chunks);
+	}
 
-  // Emit audio event to the stream
-  streamJSONEvent(controller, {
-    type: eventType,
-    audioData: audioResponse.toString('base64'),
-    audioFormat: 'audio/mpeg',
-    content: text,
-  });
+	// Emit audio event to the stream
+	streamJSONEvent(controller, {
+		type: eventType,
+		audioData: audioResponse.toString('base64'),
+		audioFormat: 'audio/mpeg',
+		content: text,
+	});
 }
