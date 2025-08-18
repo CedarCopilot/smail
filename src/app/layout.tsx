@@ -19,6 +19,7 @@ import { useEmailStore } from './store/emailStore';
 import { useRouter } from 'next/navigation';
 import './globals.css';
 import { messageRenderers } from '@/app/cedar-os/messageRenderers';
+import { responseProcessors } from '@/app/cedar-os/responseProcessors';
 import { useCedarStore, useRegisterState } from 'cedar-os';
 import { generateDraft, rewriteDraft } from '@/app/cedar-os/AIWorkflows';
 
@@ -296,6 +297,7 @@ function RootLayout({ children }: { children: ReactNode }) {
 				<CedarCopilot
 					llmProvider={llmProvider}
 					messageRenderers={messageRenderers}
+					responseProcessors={responseProcessors}
 					voiceSettings={{
 						useBrowserTTS: false,
 						stream: true,

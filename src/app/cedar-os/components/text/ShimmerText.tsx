@@ -33,7 +33,7 @@ export const ShimmerText: React.FC<ShimmerTextProps> = ({ text, state }) => {
 
 	return (
 		<div
-			className='flex mx-0.5 items-center'
+			className='flex mx-0.5 items-center text-sm'
 			aria-label={text}
 			tabIndex={0}
 			role='text'>
