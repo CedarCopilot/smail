@@ -17,6 +17,7 @@ import {
 import { useEmailStore } from '@/app/store/emailStore';
 import { Email } from '@/app/types';
 import { format } from 'date-fns';
+import { useRegisterState, useSubscribeStateToInputContext } from 'cedar-os';
 
 interface EmailViewProps {
   email: Email;
@@ -30,6 +31,27 @@ function EmailView({ email, onClose }: EmailViewProps) {
   if (!email.isRead) {
     markAsRead([email.id]);
   }
+
+  useRegisterState({
+    key: 'currentEmailBeingViewed',
+    value: email,
+  });
+
+  useSubscribeStateToInputContext<Email>(
+    'currentEmailBeingViewed',
+    (email) => ({
+      currentEmailBeingViewed: {
+        from: email.from,
+        body: email.body,
+        subject: email.subject,
+      },
+    }),
+    {
+      icon: <Mail className="w-4 h-4 text-gray-600 dark:text-gray-400" />,
+      labelField: 'subject',
+      color: '#CCCCFF',
+    },
+  );
 
   return (
     <div className="bg-white dark:bg-gray-900 rounded-lg overflow-hidden flex flex-col">

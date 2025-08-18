@@ -7,9 +7,9 @@ import React, {
   useState,
 } from 'react';
 import { useCedarStore, useStyling } from 'cedar-os';
-import Container3DButton from '@/app/cedar-os/components//containers/Container3DButton';
+import Container3DButton from '@/app/cedar-os/components/containers/Container3DButton';
 import { GripVertical } from 'lucide-react';
-import InsetGlow from '@/app/cedar-os/components//ornaments/InsetGlow';
+import InsetGlow from '@/app/cedar-os/components/ornaments/InsetGlow';
 
 /**
  * Shared collapsed trigger button for Cedar chat UIs.

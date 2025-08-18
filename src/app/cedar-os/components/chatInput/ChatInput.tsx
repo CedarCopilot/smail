@@ -1,14 +1,14 @@
 import { useVoice, VoiceIndicator, cn } from 'cedar-os';
 
 import { CedarEditorContent as EditorContent } from 'cedar-os';
-import { Code, Image, Mic, SendHorizontal } from 'lucide-react';
+import { Code, Image, Mic, SendHorizonal } from 'lucide-react';
 import { motion } from 'motion/react';
 import React, { useCallback, useEffect } from 'react';
 
 import './ChatInput.css';
-import { ContextBadgeRow } from '@/app/cedar-os/components//chatInput/ContextBadgeRow';
+import { ContextBadgeRow } from '@/app/cedar-os/components/chatInput/ContextBadgeRow';
 import { useCedarEditor } from 'cedar-os';
-import Container3DButton from '@/app/cedar-os/components//containers/Container3DButton';
+import Container3DButton from '@/app/cedar-os/components/containers/Container3DButton';
 
 // ChatContainer component with position options
 export type ChatContainerPosition = 'bottom-center' | 'embedded' | 'custom';
@@ -25,6 +25,7 @@ export const ChatInput: React.FC<{
   const { editor, isEditorEmpty, handleSubmit } = useCedarEditor({
     onFocus: handleFocus,
     onBlur: handleBlur,
+    stream,
   });
 
   // Initialize voice functionality
@@ -199,7 +200,7 @@ export const ChatInput: React.FC<{
             },
             transition: { type: 'spring', stiffness: 300, damping: 20 },
           }}
-          onClick={() => handleSubmit({ stream })}
+          onClick={() => handleSubmit()}
           color={isEditorEmpty ? undefined : '#93c5fd'}
           className="flex items-center flex-shrink-0 ml-auto -mt-0.5 rounded-full bg-white dark:bg-gray-800"
           childClassName="p-1.5"
@@ -208,7 +209,7 @@ export const ChatInput: React.FC<{
             animate={{ rotate: isEditorEmpty ? 0 : -90 }}
             transition={{ type: 'spring', stiffness: 300, damping: 20 }}
           >
-            <SendHorizontal className="w-4 h-4" />
+            <SendHorizonal className="w-4 h-4" />
           </motion.div>
         </Container3DButton>
       </div>

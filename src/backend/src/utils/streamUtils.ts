@@ -1,4 +1,5 @@
 import { StreamTextResult } from 'ai';
+import type { Readable } from 'stream';
 
 // ------------------- Functions for Data-Only SSE Format -------------------
 
@@ -74,4 +75,48 @@ export async function handleTextStream(
   }
 
   return chunks.join('');
+}
+
+/**
+ * Generate audio from provided text using a speak function and emit an 'audio' event via SSE.
+ * The speak function should return a NodeJS.ReadableStream of audio data.
+ */
+export async function streamAudioFromText(
+  controller: ReadableStreamDefaultController<Uint8Array>,
+  // Accept either Node.js Readable or Web ReadableStream for broader compatibility
+  speakFn: (text: string, options?: Record<string, unknown>) => Promise<Readable | ReadableStream>,
+  text: string,
+  options: { voice?: string; speed?: number; eventType?: string } = {},
+) {
+  const { voice = 'alloy', speed = 1.0, eventType = 'audio' } = options;
+  const speechStream = await speakFn(text, { voice, speed });
+
+  // Convert stream to buffer for response (support Web ReadableStream and Node Readable)
+  let audioResponse: Buffer;
+  if (typeof (speechStream as ReadableStream).getReader === 'function') {
+    // Web ReadableStream
+    const reader = (speechStream as ReadableStream).getReader();
+    const parts: Uint8Array[] = [];
+    for (;;) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      if (value) parts.push(value);
+    }
+    audioResponse = Buffer.concat(parts.map((u8) => Buffer.from(u8)));
+  } else {
+    // Node Readable
+    const chunks: Buffer[] = [];
+    for await (const chunk of speechStream as unknown as Readable) {
+      chunks.push(Buffer.from(chunk as Buffer));
+    }
+    audioResponse = Buffer.concat(chunks);
+  }
+
+  // Emit audio event to the stream
+  streamJSONEvent(controller, {
+    type: eventType,
+    audioData: audioResponse.toString('base64'),
+    audioFormat: 'audio/mpeg',
+    content: text,
+  });
 }

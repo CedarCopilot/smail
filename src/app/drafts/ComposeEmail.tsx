@@ -1,13 +1,13 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import {
   X,
   Minimize2,
   Maximize2,
   Trash2,
   Paperclip,
-  Image,
+  Image as ImageIcon,
   Link,
   Smile,
   MoreVertical,
@@ -15,6 +15,8 @@ import {
 } from 'lucide-react';
 import { useEmailStore } from '@/app/store/emailStore';
 import { EmailAddress } from '@/app/types';
+import { useRegisterState, useCedarStore } from 'cedar-os';
+import type { ComposeEmailData } from '@/app/types';
 
 interface ComposeEmailProps {
   draftId: string;
@@ -38,11 +40,53 @@ export function ComposeEmail({ draftId, inline = false }: ComposeEmailProps) {
   const [showBcc, setShowBcc] = useState(false);
   const bodyRef = useRef<HTMLTextAreaElement>(null);
 
+  // Memoize custom setters to avoid config identity changes on each render
+  const draftReplySetters = useMemo(
+    () => ({
+      draftReply: {
+        name: 'draftReply',
+        description: 'Set the current email draft body to the provided string.',
+        parameters: [{ name: 'draft', type: 'string', description: 'Email body content' }],
+        execute: (_current: Partial<ComposeEmailData>, ...args: unknown[]) => {
+          const setCedarState = useCedarStore.getState().setCedarState;
+          const draftBody = String(args[0] ?? '');
+          setCedarState('emailDraft', { body: draftBody });
+        },
+      },
+    }),
+    [],
+  );
+
+  const initialEmailDraftValue = useMemo<Partial<ComposeEmailData>>(() => ({}), []);
+
+  // Register the Cedar state and its custom setter once mounted
+  useRegisterState<Partial<ComposeEmailData>>({
+    key: 'emailDraft',
+    // Use a stable initial value to avoid re-registration loops
+    value: initialEmailDraftValue,
+    customSetters: draftReplySetters,
+  });
+
+  // Subscribe to Cedar draft state and sync into this compose draft
+  const cedarDraft = useCedarStore((state) =>
+    state.getCedarState('emailDraft'),
+  ) as Partial<ComposeEmailData>;
+
   useEffect(() => {
     if (draft && !draft.isMinimized && bodyRef.current) {
       bodyRef.current.focus();
     }
-  }, [draft?.isMinimized]);
+  }, [draft, draft?.isMinimized]);
+
+  // When Cedar's `emailDraft` updates its body, copy it into this draft
+  useEffect(() => {
+    if (!draft) return;
+    const cedarBody = cedarDraft?.body || '';
+    const currentBody = draft.data.body || '';
+    if (cedarBody && cedarBody !== currentBody) {
+      updateComposeDraftData(draftId, { body: cedarBody });
+    }
+  }, [cedarDraft?.body, draftId, draft, updateComposeDraftData]);
 
   if (!draft) return null;
 
@@ -270,7 +314,7 @@ export function ComposeEmail({ draftId, inline = false }: ComposeEmailProps) {
                   <Smile className="w-4 h-4 text-gray-600 dark:text-gray-400" />
                 </button>
                 <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded">
-                  <Image className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                  <ImageIcon className="w-4 h-4 text-gray-600 dark:text-gray-400" />
                 </button>
                 <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded">
                   <MoreVertical className="w-4 h-4 text-gray-600 dark:text-gray-400" />

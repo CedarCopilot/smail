@@ -11,6 +11,7 @@ import { ComposeManager } from './drafts/ComposeManager';
 import { usePathname } from 'next/navigation';
 import { SidePanelCedarChat } from '@/app/cedar-os/components/chatComponents/SidePanelCedarChat';
 import './globals.css';
+import { messageRenderers } from '@/app/cedar-os/messageRenderers';
 
 function RootLayout({ children }: { children: ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -26,6 +27,7 @@ function RootLayout({ children }: { children: ReactNode }) {
       provider: 'mastra',
       baseURL: process.env.NEXT_PUBLIC_MASTRA_URL || 'http://localhost:4112',
       apiKey: process.env.NEXT_PUBLIC_MASTRA_API_KEY,
+      voiceRoute: '/voice',
     }),
     [],
   );
@@ -33,7 +35,14 @@ function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
       <body>
-        <CedarCopilot llmProvider={llmProvider}>
+        <CedarCopilot
+          llmProvider={llmProvider}
+          messageRenderers={messageRenderers}
+          voiceSettings={{
+            useBrowserTTS: false,
+            stream: true,
+          }}
+        >
           <SidePanelCedarChat
             side="right"
             title="Email Assistant"

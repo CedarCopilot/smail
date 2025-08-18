@@ -1,7 +1,7 @@
 import React from 'react';
 import { HTMLMotionProps } from 'motion/react';
-import Container3D from '@/app/cedar-os/components//containers/Container3D';
-import GlowingMesh from '@/app/cedar-os/components//ornaments/GlowingMesh';
+import Container3D from '@/app/cedar-os/components/containers/Container3D';
+import GlowingMesh from '@/app/cedar-os/components/ornaments/GlowingMesh';
 import { cn } from 'cedar-os';
 
 interface Container3DButtonProps {

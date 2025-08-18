@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { DialogueOptionChoice, DialogueOptionsMessage, useCedarStore, cn } from 'cedar-os';
-import Flat3dButton from '@/app/cedar-os/components//containers/Flat3dButton';
+import Flat3dButton from '@/app/cedar-os/components/containers/Flat3dButton';
 
 interface DialogueOptionsProps {
   message: DialogueOptionsMessage;
