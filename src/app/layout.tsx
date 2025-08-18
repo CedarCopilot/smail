@@ -12,6 +12,7 @@ import { usePathname } from 'next/navigation';
 import { SidePanelCedarChat } from '@/app/cedar-os/components/chatComponents/SidePanelCedarChat';
 import './globals.css';
 import { messageRenderers } from '@/app/cedar-os/messageRenderers';
+import { responseProcessors } from '@/app/cedar-os/responseProcessors';
 
 function RootLayout({ children }: { children: ReactNode }) {
 	const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -38,6 +39,7 @@ function RootLayout({ children }: { children: ReactNode }) {
 				<CedarCopilot
 					llmProvider={llmProvider}
 					messageRenderers={messageRenderers}
+					responseProcessors={responseProcessors}
 					voiceSettings={{
 						useBrowserTTS: false,
 						stream: true,

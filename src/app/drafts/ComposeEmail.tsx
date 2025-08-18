@@ -292,7 +292,7 @@ export function ComposeEmail({ draftId, inline = false }: ComposeEmailProps) {
 					</div>
 
 					{/* Body */}
-					<div className={`flex-1 p-4 ${inline ? 'min-h-[200px]' : ''}`}>
+					<div className={`flex-1 p-4 overflow-hidden ${inline ? 'min-h-[200px]' : ''}`}>
 						<textarea
 							ref={bodyRef}
 							value={draft.data.body || ''}
@@ -300,7 +300,7 @@ export function ComposeEmail({ draftId, inline = false }: ComposeEmailProps) {
 								updateComposeDraftData(draftId, { body: e.target.value })
 							}
 							placeholder='Compose email'
-							className='w-full h-full bg-transparent outline-none resize-none text-sm'
+							className='w-full h-full bg-transparent outline-none resize-none text-sm overflow-y-auto'
 						/>
 					</div>
 

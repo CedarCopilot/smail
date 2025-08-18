@@ -50,6 +50,8 @@ export const ChatInputSchema = z.object({
 	// For structured output
 	output: z.any().optional(),
 	additionalContext: z.any().optional(),
+	// If true, caller is the voice route and audio events should NOT be emitted here
+	isVoice: z.boolean().optional(),
 });
 
 export const ChatOutputSchema = z.object({
@@ -149,6 +151,7 @@ const callAgent = createStep({
 			systemPrompt,
 			resourceId,
 			threadId,
+			isVoice,
 		} = inputData;
 
 		// Streaming path: forward nested streaming chunks and synthetic progress updates
@@ -174,6 +177,7 @@ const callAgent = createStep({
 					name: 'whisper-1',
 				},
 			});
+			const encoder = new TextEncoder();
 			let pendingText = '';
 
 			for await (const chunk of stream) {
@@ -182,11 +186,17 @@ const callAgent = createStep({
 					case 'text-delta': {
 						const text =
 							(chunk as { payload?: { text?: string } }).payload?.text ?? '';
-						if (text) pendingText += text;
+						if (!text) break;
+						if (isVoice) {
+							pendingText += text;
+						} else {
+							const escaped = text.replace(/\n/g, '\\n');
+							streamController.enqueue(encoder.encode(`data:${escaped}\n\n`));
+						}
 						break;
 					}
 					case 'tool-call': {
-						if (pendingText) {
+						if (isVoice && pendingText) {
 							const speakFn = (t: string, options?: Record<string, unknown>) =>
 								voiceProvider.speak(
 									t,
@@ -204,10 +214,11 @@ const callAgent = createStep({
 							);
 							pendingText = '';
 						}
+						streamJSONEvent(streamController, chunk);
 						break;
 					}
 					case 'tool-result': {
-						if (pendingText) {
+						if (isVoice && pendingText) {
 							const speakFn = (t: string, options?: Record<string, unknown>) =>
 								voiceProvider.speak(
 									t,
@@ -250,7 +261,7 @@ const callAgent = createStep({
 			// Access convenience promises exposed by the stream
 			const finalResult = stream.text;
 
-			if (pendingText) {
+			if (isVoice && pendingText) {
 				const speakFn = (t: string, options?: Record<string, unknown>) =>
 					voiceProvider.speak(
 						t,

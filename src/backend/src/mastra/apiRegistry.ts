@@ -8,9 +8,7 @@ import {
 	ChatInputSchema,
 	ChatOutput,
 } from './workflows/emailWorkflow';
-// Note: Context type will be inferred from parameter usage
 
-// Shared voice provider instance
 const voiceProvider = new OpenAIVoice({
 	speechModel: { apiKey: process.env.OPENAI_API_KEY!, name: 'tts-1' },
 	listeningModel: { apiKey: process.env.OPENAI_API_KEY!, name: 'whisper-1' },
@@ -62,10 +60,6 @@ export const apiRoutes = [
 
 				if (result.status === 'success') {
 					// Simply forward the workflow response to the frontend
-					console.log(
-						'Sending response',
-						JSON.stringify(result.result, null, 2)
-					);
 					return c.json<ChatOutput>(result.result);
 				}
 			} catch (error) {
@@ -85,6 +79,14 @@ export const apiRoutes = [
 				const form = await c.req.formData();
 				const audioFile = form.get('audio') as File;
 				const additionalContext = form.get('context') as string | null;
+				let parsedAdditionalContext: unknown = undefined;
+				if (additionalContext) {
+					try {
+						parsedAdditionalContext = JSON.parse(additionalContext);
+					} catch {
+						// leave undefined if not valid JSON
+					}
+				}
 				if (!audioFile) return c.json({ error: 'audio required' }, 400);
 
 				const buf = Buffer.from(await audioFile.arrayBuffer());
@@ -92,13 +94,12 @@ export const apiRoutes = [
 					filetype: 'webm',
 				});
 
-				const prompt = additionalContext
-					? `${transcription}\n\nAdditional context: ${additionalContext}`
-					: transcription;
-
 				const run = await emailWorkflow.createRunAsync();
 				const result = await run.start({
-					inputData: { prompt },
+					inputData: {
+						prompt: transcription,
+						additionalContext: parsedAdditionalContext ?? additionalContext,
+					},
 				});
 
 				if (result.status === 'success') {
@@ -149,7 +150,6 @@ export const apiRoutes = [
 		},
 		handler: async (c) => {
 			try {
-				console.log('=== chat/stream API route called ===');
 				const body = await c.req.json();
 				const {
 					prompt,
@@ -196,9 +196,15 @@ export const apiRoutes = [
 			try {
 				const form = await c.req.formData();
 				const audioFile = form.get('audio') as File;
-				const additionalContext = form.get('additionalContext') as
-					| string
-					| null;
+				const additionalContext = form.get('context') as string | null;
+				let parsedAdditionalContext: unknown = undefined;
+				if (additionalContext) {
+					try {
+						parsedAdditionalContext = JSON.parse(additionalContext);
+					} catch {
+						// leave undefined if not valid JSON
+					}
+				}
 				if (!audioFile) return c.json({ error: 'audio required' }, 400);
 
 				const buf = Buffer.from(await audioFile.arrayBuffer());
@@ -213,13 +219,14 @@ export const apiRoutes = [
 						transcription,
 					});
 
-					const prompt = additionalContext
-						? `${transcription}\n\nAdditional context: ${additionalContext}`
-						: transcription;
-
 					const run = await emailWorkflow.createRunAsync();
 					const result = await run.start({
-						inputData: { prompt, streamController: controller },
+						inputData: {
+							prompt: transcription,
+							additionalContext: parsedAdditionalContext ?? additionalContext,
+							streamController: controller,
+							isVoice: true,
+						},
 					});
 					if (result.status !== 'success') {
 						throw new Error(`Workflow failed: ${result.status}`);

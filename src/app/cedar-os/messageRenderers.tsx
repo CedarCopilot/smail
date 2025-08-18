@@ -5,6 +5,7 @@ import {
 	ActionMessageFor,
 	Message,
 } from 'cedar-os';
+import TodoList from '@/app/cedar-os/components/chatMessages/TodoList';
 
 type SearchPersonToolResultPayload = {
 	toolCallId: string;
@@ -25,16 +26,34 @@ type CheckCalendarToolResultPayload = {
 	};
 };
 
+export type ToolResultPayload =
+	| SearchPersonToolResultPayload
+	| CheckCalendarToolResultPayload;
+
 type CustomToolMessage = CustomMessage<
 	'tool-result',
 	MastraStreamedResponse & {
 		type: 'tool-result';
-		payload: SearchPersonToolResultPayload | CheckCalendarToolResultPayload;
+		payload: ToolResultPayload;
 	}
 >;
 
 type PersonResult = SearchPersonToolResultPayload['result'];
 type CalendarResult = CheckCalendarToolResultPayload['result'];
+
+type ToolCallPayload = {
+	toolCallId?: string;
+	toolName?: string;
+	args?: unknown;
+};
+
+type CustomToolCallMessage = CustomMessage<
+	'tool-call',
+	MastraStreamedResponse & {
+		type: 'tool-call';
+		payload: ToolCallPayload;
+	}
+>;
 
 function isCalendarResult(
 	result: PersonResult | CalendarResult | undefined
@@ -49,6 +68,57 @@ function isPersonResult(
 		!!result && typeof (result as PersonResult).emailStyleSummary === 'string'
 	);
 }
+
+function extractQuery(args: unknown): string {
+	if (typeof args === 'object' && args !== null) {
+		// Try object shape { query: string }
+		const obj = args as Record<string, unknown>;
+		const q = obj['query'];
+		if (typeof q === 'string') return q;
+	}
+	if (Array.isArray(args) && args.length > 0) {
+		const first = args[0] as unknown;
+		if (typeof first === 'object' && first !== null) {
+			const inner = first as Record<string, unknown>;
+			const q = inner['query'];
+			if (typeof q === 'string') return q;
+		}
+	}
+	return '';
+}
+
+const toolCallPhrases: Record<string, (payload: ToolCallPayload) => string> = {
+	checkCalendarTool: () => 'Checking your calendar...',
+	searchPersonTool: (payload) => {
+		const query = extractQuery(payload.args);
+		return query ? `Searching for ${query}` : 'Searching for conversations...';
+	},
+	writeEmailTool: () => 'Writing response email...',
+};
+
+export const toolCallMessageRenderer: MessageRenderer<CustomToolCallMessage> = {
+	type: 'tool-call',
+	render: (message) => {
+		const toolPayload = (message as CustomToolCallMessage).payload;
+		const toolName = toolPayload.toolName || '';
+		const phraseResolver = toolCallPhrases[toolName];
+		const text = phraseResolver ? phraseResolver(toolPayload) : 'Working...';
+		return (
+			<TodoList
+				message={{
+					items: [
+						{
+							text: text,
+							done: (message.metadata?.complete as boolean) ?? false,
+						},
+					],
+					...message,
+					type: 'todolist',
+				}}
+			/>
+		);
+	},
+};
 
 export const toolResultMessageRenderer: MessageRenderer<CustomToolMessage> = {
 	type: 'tool-result',
@@ -138,11 +208,12 @@ export const actionResultMessageRenderer: MessageRenderer<ActionResultMessage> =
 	{
 		type: 'action',
 		render: (message) => {
-			return <div>Drafted email: {message.args[0]}</div>;
+			return <div>Drafted email: {message.args[0].slice(0, 100) + '...'}</div>;
 		},
 	};
 
 export const messageRenderers = [
+	toolCallMessageRenderer,
 	toolResultMessageRenderer,
 	actionResultMessageRenderer,
 ] as MessageRenderer<Message>[];

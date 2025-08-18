@@ -159,7 +159,47 @@ const generateMockEmails = (): Email[] => {
 	const emails: Email[] = [];
 	const now = new Date();
 
-	for (let i = 0; i < 50; i++) {
+	// Add the default email from Avery Chen first
+	const averyEmail = {
+		id: 'email-avery-default',
+		threadId: 'thread-avery',
+		from: {
+			email: 'avery.chen@gmail.com',
+			name: 'Avery Chen',
+			avatar: 'https://i.pravatar.cc/150?u=avery',
+		},
+		to: [{ email: 'me@gmail.com', name: 'Me' }],
+		subject: 'Meeting Request - Project Sync',
+		body: `Hi there,
+
+I hope this email finds you well. I've been reviewing our project timeline and I think we should schedule a sync meeting to discuss our progress and next steps.
+
+We've made significant progress on the frontend components, but there are a few areas where I'd like to get your input. Specifically, I want to discuss the user authentication flow and how we're handling data persistence.
+
+I'm also excited to share some updates on the new features we've been working on. I think you'll find them quite interesting and they align perfectly with our original vision.
+
+What times work for you to meet this week? I'm flexible with my schedule and can accommodate most times between Tuesday and Friday. We could do either a video call or meet in person if you prefer.
+
+Looking forward to hearing from you!
+
+Best regards,
+Avery Chen`,
+		bodyPreview: `Hi there, I hope this email finds you well. I've been reviewing our project timeline and I think we should schedule a sync meeting to discuss our progress and next steps...`,
+		date: new Date(now.getTime() - 2 * 60 * 60 * 1000), // 2 hours ago
+		isRead: false,
+		isStarred: false,
+		isImportant: true,
+		isDraft: false,
+		isSent: false,
+		isTrash: false,
+		isSpam: false,
+		labels: [],
+		attachments: undefined,
+	};
+
+	emails.push(averyEmail);
+
+	for (let i = 0; i < 49; i++) {
 		const sender = senders[Math.floor(Math.random() * senders.length)];
 		const subject = subjects[Math.floor(Math.random() * subjects.length)];
 		const body = bodies[Math.floor(Math.random() * bodies.length)];
