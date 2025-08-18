@@ -1,6 +1,6 @@
 'use client';
 
-import { ReactNode, useMemo, useState, memo } from 'react';
+import { ReactNode, useMemo, useState, memo, useEffect } from 'react';
 import { CedarCopilot } from 'cedar-os';
 import type { ProviderConfig, ActivationConditions } from 'cedar-os';
 import { Hotkey, ActivationMode } from 'cedar-os';
@@ -21,7 +21,13 @@ import './globals.css';
 import { messageRenderers } from '@/app/cedar-os/messageRenderers';
 import { responseProcessors } from '@/app/cedar-os/responseProcessors';
 import { useCedarStore, useRegisterState } from 'cedar-os';
-import { generateDraft, rewriteDraft } from '@/app/cedar-os/AIWorkflows';
+import {
+	scheduleMeetingWorkflow,
+	politeRejectionWorkflow,
+	followUpWorkflow,
+	thankYouWorkflow,
+	rewriteDraftWorkflow,
+} from '@/app/cedar-os/workflows';
 
 function RootLayout({ children }: { children: ReactNode }) {
 	const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -64,24 +70,20 @@ function RootLayout({ children }: { children: ReactNode }) {
 						? emails.find((e) => e.id === emailId)
 						: null;
 
-					// Generate draft using AI workflow
-					const draft = await generateDraft({
-						prompt: 'Generate a professional email to schedule a meeting',
-						context: {
-							recipientName: currentEmail?.from?.name,
-							recipientEmail: currentEmail?.from?.email,
-						},
-					});
-
-					// Open compose with the generated draft
+					// Open compose first
 					openCompose('new');
-					// Update the compose data with the generated draft
-					useEmailStore.getState().updateComposeData({
-						subject: draft.subject,
-						body: draft.body,
-					});
 
-					console.log('Generated meeting schedule draft:', draft);
+					// Use workflow to call backend
+					await scheduleMeetingWorkflow(
+						{
+							prompt: 'Generate a professional email to schedule a meeting',
+							context: {
+								recipientName: currentEmail?.from?.name,
+								recipientEmail: currentEmail?.from?.email,
+							},
+						},
+						currentEmail?.id
+					);
 				},
 			},
 			{
@@ -94,28 +96,26 @@ function RootLayout({ children }: { children: ReactNode }) {
 						? emails.find((e) => e.id === emailId)
 						: null;
 
-					const draft = await generateDraft({
-						prompt:
-							'Generate a polite rejection email that declines an offer or request professionally',
-						context: {
-							recipientName: currentEmail?.from?.name,
-							recipientEmail: currentEmail?.from?.email,
-							originalEmail: currentEmail?.body,
-						},
-					});
-
+					// Open compose first
 					if (currentEmail) {
 						openCompose('reply', currentEmail);
 					} else {
 						openCompose('new');
 					}
-					// Update the compose data with the generated draft
-					useEmailStore.getState().updateComposeData({
-						subject: draft.subject,
-						body: draft.body,
-					});
 
-					console.log('Generated polite rejection draft:', draft);
+					// Use workflow to call backend
+					await politeRejectionWorkflow(
+						{
+							prompt:
+								'Generate a polite rejection email that declines an offer or request professionally',
+							context: {
+								recipientName: currentEmail?.from?.name,
+								recipientEmail: currentEmail?.from?.email,
+								originalEmail: currentEmail?.body,
+							},
+						},
+						currentEmail?.id
+					);
 				},
 			},
 			{
@@ -128,28 +128,26 @@ function RootLayout({ children }: { children: ReactNode }) {
 						? emails.find((e) => e.id === emailId)
 						: null;
 
-					const draft = await generateDraft({
-						prompt:
-							'Generate a follow-up email to check on previous conversation or request',
-						context: {
-							recipientName: currentEmail?.from?.name,
-							recipientEmail: currentEmail?.from?.email,
-							originalEmail: currentEmail?.body,
-						},
-					});
-
+					// Open compose first
 					if (currentEmail) {
 						openCompose('reply', currentEmail);
 					} else {
 						openCompose('new');
 					}
-					// Update the compose data with the generated draft
-					useEmailStore.getState().updateComposeData({
-						subject: draft.subject,
-						body: draft.body,
-					});
 
-					console.log('Generated follow-up draft:', draft);
+					// Use workflow to call backend
+					await followUpWorkflow(
+						{
+							prompt:
+								'Generate a follow-up email to check on previous conversation or request',
+							context: {
+								recipientName: currentEmail?.from?.name,
+								recipientEmail: currentEmail?.from?.email,
+								originalEmail: currentEmail?.body,
+							},
+						},
+						currentEmail?.id
+					);
 				},
 			},
 			{
@@ -162,24 +160,21 @@ function RootLayout({ children }: { children: ReactNode }) {
 						? emails.find((e) => e.id === emailId)
 						: null;
 
-					const draft = await generateDraft({
-						prompt:
-							'Generate a thank you email expressing appreciation and gratitude',
-						context: {
-							recipientName: currentEmail?.from?.name,
-							recipientEmail: currentEmail?.from?.email,
-						},
-					});
-
-					// Open compose with the generated draft
+					// Open compose first
 					openCompose('new');
-					// Update the compose data with the generated draft
-					useEmailStore.getState().updateComposeData({
-						subject: draft.subject,
-						body: draft.body,
-					});
 
-					console.log('Generated thank you draft:', draft);
+					// Use workflow to call backend
+					await thankYouWorkflow(
+						{
+							prompt:
+								'Generate a thank you email expressing appreciation and gratitude',
+							context: {
+								recipientName: currentEmail?.from?.name,
+								recipientEmail: currentEmail?.from?.email,
+							},
+						},
+						currentEmail?.id
+					);
 				},
 			},
 		],
@@ -190,7 +185,7 @@ function RootLayout({ children }: { children: ReactNode }) {
 	const activationConditions: ActivationConditions = useMemo(
 		() => ({
 			events: [Hotkey.G],
-			mode: ActivationMode.HOLD,
+			mode: ActivationMode.TOGGLE,
 		}),
 		[]
 	);
@@ -255,9 +250,8 @@ function RootLayout({ children }: { children: ReactNode }) {
 		});
 	};
 
-	// Handle slider completion - now uses rewriteDraft workflow
+	// Handle slider completion - uses rewriteDraftWorkflow with agent
 	const handleSliderComplete = async (value: number) => {
-		// Value is already the word count
 		// Update Cedar state
 		const setCedarState = useCedarStore.getState().setCedarState;
 		setCedarState('draftSliderState', {
@@ -267,25 +261,40 @@ function RootLayout({ children }: { children: ReactNode }) {
 
 		// Get current compose draft if available
 		const { composeData, isComposeOpen } = useEmailStore.getState();
-		if (isComposeOpen && composeData) {
-			// Rewrite the current draft with the target word count
-			const rewrittenDraft = await rewriteDraft({
-				prompt:
-					'Rewrite this email to match the target word count while maintaining the key message',
-				wordNum: value,
-				originalDraft: {
-					subject: composeData.subject || '',
-					body: composeData.body || '',
-				},
+
+		// Determine current draft source
+		const currentDraft = {
+			subject: composeData?.subject || '',
+			body: composeData?.body || '',
+		};
+
+		// Only proceed if there's content to rewrite
+		if (isComposeOpen) {
+			// Find the appropriate range context
+			const range = wordCountRanges.find(
+				(r) => value >= r.min && value <= r.max
+			);
+			const rangeName = range?.text
+				? range.text.replace('${value}', value.toString())
+				: `${value} words`;
+
+			// Call the rewrite workflow
+			await rewriteDraftWorkflow({
+				prompt: `Rewrite this email to match the target word count while maintaining the key message and appropriate tone for the ${rangeName} length.`,
+				wordCount: value,
+				currentDraft,
+				rangeContext: range
+					? {
+							min: range.min,
+							max: range.max,
+							rangeName,
+						}
+					: undefined,
 			});
 
-			// Update the compose draft with the rewritten version
-			useEmailStore.getState().updateComposeData({
-				subject: rewrittenDraft.subject,
-				body: rewrittenDraft.body,
-			});
-
-			console.log('Email draft rewritten:', rewrittenDraft);
+			console.log(
+				`Email draft rewrite initiated for ${value} words (${rangeName})`
+			);
 		} else {
 			console.log('No active draft to rewrite. Target word count:', value);
 		}
@@ -336,7 +345,7 @@ function RootLayout({ children }: { children: ReactNode }) {
 						spellId='email-draft-length-slider'
 						activationConditions={{
 							events: ['t'],
-							mode: ActivationMode.HOLD,
+							mode: ActivationMode.TOGGLE,
 						}}
 						sliderConfig={{
 							min: 5,
