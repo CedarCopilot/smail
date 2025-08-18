@@ -12,6 +12,8 @@ import {
 	Smile,
 	MoreVertical,
 	ChevronDown,
+	Check,
+	XCircle,
 } from 'lucide-react';
 import { useEmailStore } from '@/app/store/emailStore';
 import { EmailAddress } from '@/app/types';
@@ -19,6 +21,7 @@ import { useRegisterState, useCedarStore } from 'cedar-os';
 import type { ComposeEmailData } from '@/app/types';
 import { AnimatePresence } from 'motion/react';
 import PhantomText from '@/app/cedar-os/components/text/PhantomText';
+import DiffText from '@/app/cedar-os/components/text/DiffText';
 
 interface ComposeEmailProps {
 	draftId: string;
@@ -46,6 +49,15 @@ export function ComposeEmail({ draftId, inline = false }: ComposeEmailProps) {
 	const [isSliderActive, setIsSliderActive] = useState(false);
 	const [phantomWordCount, setPhantomWordCount] = useState(50);
 
+	// State for diff mode
+	const [isDiffMode, setIsDiffMode] = useState(false);
+	const [originalDraft, setOriginalDraft] = useState<Partial<ComposeEmailData>>(
+		{}
+	);
+	const [proposedDraft, setProposedDraft] = useState<Partial<ComposeEmailData>>(
+		{}
+	);
+
 	// Memoize custom setters to avoid config identity changes on each render
 	const draftReplySetters = useMemo(
 		() => ({
@@ -67,16 +79,37 @@ export function ComposeEmail({ draftId, inline = false }: ComposeEmailProps) {
 					const draftBody = String(args[0] ?? '');
 					const draftSubject = args[1] ? String(args[1]) : undefined;
 
+					// When a new draft is proposed, enter diff mode
+					if (draft) {
+						// Store the current draft as the original
+						setOriginalDraft({
+							body: draft.data.body || '',
+							subject: draft.data.subject || '',
+						});
+
+						// Store the proposed changes
+						const proposedData: Partial<ComposeEmailData> = {
+							body: draftBody,
+						};
+						if (draftSubject !== undefined) {
+							proposedData.subject = draftSubject;
+						}
+						setProposedDraft(proposedData);
+
+						// Enter diff mode
+						setIsDiffMode(true);
+					}
+
+					// Still update Cedar state for other components that might need it
 					const draftData: Partial<ComposeEmailData> = { body: draftBody };
 					if (draftSubject !== undefined) {
 						draftData.subject = draftSubject;
 					}
-
 					setCedarState('emailDraft', draftData);
 				},
 			},
 		}),
-		[]
+		[draft]
 	);
 
 	const initialEmailDraftValue = useMemo<Partial<ComposeEmailData>>(
@@ -122,15 +155,15 @@ export function ComposeEmail({ draftId, inline = false }: ComposeEmailProps) {
 		}
 	}, [draft, draft?.isMinimized]);
 
-	// When Cedar's `emailDraft` updates its body, copy it into this draft
+	// When Cedar's `emailDraft` updates its body, copy it into this draft (only if not in diff mode)
 	useEffect(() => {
-		if (!draft) return;
+		if (!draft || isDiffMode) return;
 		const cedarBody = cedarDraft?.body || '';
 		const currentBody = draft.data.body || '';
 		if (cedarBody && cedarBody !== currentBody) {
 			updateComposeDraftData(draftId, { body: cedarBody });
 		}
-	}, [cedarDraft?.body, draftId, draft, updateComposeDraftData]);
+	}, [cedarDraft?.body, draftId, draft, updateComposeDraftData, isDiffMode]);
 
 	if (!draft) return null;
 
@@ -258,6 +291,24 @@ export function ComposeEmail({ draftId, inline = false }: ComposeEmailProps) {
 		);
 	};
 
+	const handleAcceptChanges = () => {
+		if (proposedDraft.body !== undefined) {
+			updateComposeDraftData(draftId, { body: proposedDraft.body });
+		}
+		if (proposedDraft.subject !== undefined) {
+			updateComposeDraftData(draftId, { subject: proposedDraft.subject });
+		}
+		setIsDiffMode(false);
+		setOriginalDraft({});
+		setProposedDraft({});
+	};
+
+	const handleRejectChanges = () => {
+		setIsDiffMode(false);
+		setOriginalDraft({});
+		setProposedDraft({});
+	};
+
 	const wrapperClass = inline
 		? 'h-full bg-white dark:bg-gray-900 rounded-lg shadow border border-gray-200 dark:border-gray-700 flex flex-col'
 		: `bg-white dark:bg-gray-900 rounded-t-lg shadow-2xl border border-gray-200 dark:border-gray-700 flex flex-col ${
@@ -319,15 +370,24 @@ export function ComposeEmail({ draftId, inline = false }: ComposeEmailProps) {
 
 					{/* Subject */}
 					<div className='border-b border-gray-200 dark:border-gray-700 px-4 py-2'>
-						<input
-							type='text'
-							value={draft.data.subject || ''}
-							onChange={(e) =>
-								updateComposeDraftData(draftId, { subject: e.target.value })
-							}
-							placeholder='Subject'
-							className='w-full bg-transparent outline-none text-sm'
-						/>
+						{isDiffMode && proposedDraft.subject !== undefined ? (
+							<DiffText
+								oldText={originalDraft.subject || ''}
+								newText={proposedDraft.subject || ''}
+								diffMode='words'
+								className='w-full text-sm'
+							/>
+						) : (
+							<input
+								type='text'
+								value={draft.data.subject || ''}
+								onChange={(e) =>
+									updateComposeDraftData(draftId, { subject: e.target.value })
+								}
+								placeholder='Subject'
+								className='w-full bg-transparent outline-none text-sm'
+							/>
+						)}
 					</div>
 
 					{/* Body */}
@@ -340,6 +400,17 @@ export function ComposeEmail({ draftId, inline = false }: ComposeEmailProps) {
 										key='phantom'
 										wordCount={phantomWordCount}
 										className='text-sm leading-relaxed text-gray-500'
+									/>
+								</div>
+							) : isDiffMode ? (
+								<div key='diff' className='w-full h-full overflow-y-auto'>
+									<DiffText
+										oldText={originalDraft.body || ''}
+										newText={proposedDraft.body || ''}
+										diffMode='words'
+										showRemoved={true}
+										animateChanges={true}
+										className='text-sm leading-relaxed'
 									/>
 								</div>
 							) : (
@@ -366,6 +437,24 @@ export function ComposeEmail({ draftId, inline = false }: ComposeEmailProps) {
 								Send
 								<ChevronDown className='w-4 h-4' />
 							</button>
+
+							{/* Show Accept/Reject buttons when in diff mode */}
+							{isDiffMode && (
+								<div className='flex items-center gap-2 ml-2'>
+									<button
+										onClick={handleAcceptChanges}
+										className='px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium text-sm flex items-center gap-1'>
+										<Check className='w-4 h-4' />
+										Accept
+									</button>
+									<button
+										onClick={handleRejectChanges}
+										className='px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium text-sm flex items-center gap-1'>
+										<XCircle className='w-4 h-4' />
+										Reject
+									</button>
+								</div>
+							)}
 
 							<div className='flex items-center gap-1 ml-4'>
 								<button className='p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded'>

@@ -1,29 +1,30 @@
 'use client';
 
-import { useMemo } from 'react';
+import { Calendar, Heart, ThumbsDown, UserCheck } from 'lucide-react';
 import { usePathname } from 'next/navigation';
-import { Calendar, ThumbsDown, UserCheck, Heart } from 'lucide-react';
-import RadialMenuSpell from '@/app/cedar-os/components/spells/RadialMenuSpell';
-import type { RadialMenuItem } from '@/app/cedar-os/components/spells/RadialMenuSpell';
-import RangeSliderSpell from '@/app/cedar-os/components/spells/RangeSliderSpell';
-import type { RangeOption } from '@/app/cedar-os/components/spells/RangeSliderSpell';
-import SliderSpell from '@/app/cedar-os/components/spells/SliderSpell';
-import type { RangeMetadata } from '@/app/cedar-os/components/spells/SliderSpell';
-import { useEmailStore } from '../store/emailStore';
+import { useMemo } from 'react';
+
 import {
+	followUpWorkflow,
+	politeRejectionWorkflow,
 	rewriteDraftWorkflow,
 	scheduleMeetingWorkflow,
-	politeRejectionWorkflow,
-	followUpWorkflow,
 	thankYouWorkflow,
 } from '@/app/cedar-os/AIWorkflows';
+import type { RadialMenuItem } from '@/app/cedar-os/components/spells/RadialMenuSpell';
+import RadialMenuSpell from '@/app/cedar-os/components/spells/RadialMenuSpell';
+import type { RangeOption } from '@/app/cedar-os/components/spells/RangeSliderSpell';
+import RangeSliderSpell from '@/app/cedar-os/components/spells/RangeSliderSpell';
+import type { RangeMetadata } from '@/app/cedar-os/components/spells/SliderSpell';
+import SliderSpell from '@/app/cedar-os/components/spells/SliderSpell';
+import type { ActivationConditions } from 'cedar-os';
 import {
-	Hotkey,
 	ActivationMode,
+	Hotkey,
 	useCedarStore,
 	useRegisterState,
 } from 'cedar-os';
-import type { ActivationConditions } from 'cedar-os';
+import { useEmailStore } from '../store/emailStore';
 
 export function useSmailCedarSpells() {
 	// Register slider state globally (once at the app level)
@@ -164,7 +165,7 @@ export function useSmailCedarSpells() {
 	const activationConditions: ActivationConditions = useMemo(
 		() => ({
 			events: [Hotkey.G],
-			mode: ActivationMode.TOGGLE,
+			mode: ActivationMode.HOLD,
 		}),
 		[]
 	);
