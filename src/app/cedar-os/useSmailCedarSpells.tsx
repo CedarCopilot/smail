@@ -5,6 +5,8 @@ import { usePathname } from 'next/navigation';
 import { Calendar, ThumbsDown, UserCheck, Heart } from 'lucide-react';
 import RadialMenuSpell from '@/app/cedar-os/components/spells/RadialMenuSpell';
 import type { RadialMenuItem } from '@/app/cedar-os/components/spells/RadialMenuSpell';
+import RangeSliderSpell from '@/app/cedar-os/components/spells/RangeSliderSpell';
+import type { RangeOption } from '@/app/cedar-os/components/spells/RangeSliderSpell';
 import SliderSpell from '@/app/cedar-os/components/spells/SliderSpell';
 import type { RangeMetadata } from '@/app/cedar-os/components/spells/SliderSpell';
 import { useEmailStore } from '../store/emailStore';
@@ -167,7 +169,56 @@ export function useSmailCedarSpells() {
 		[]
 	);
 
-	// Define word count ranges with metadata for email drafts
+	// Define word count options for email drafts
+	const wordCountOptions: RangeOption[] = useMemo(
+		() => [
+			{
+				value: 10,
+				text: 'Tweet (${value} words)',
+				icon: '🐦',
+				color: '#1DA1F2',
+			},
+			{
+				value: 25,
+				text: 'Summary (${value} words)',
+				icon: '📝',
+				color: '#10B981',
+			},
+			{
+				value: 50,
+				text: 'Paragraph (${value} words)',
+				icon: '📄',
+				color: '#F59E0B',
+			},
+			{
+				value: 150,
+				text: 'Short Article (${value} words)',
+				icon: '📰',
+				color: '#EF4444',
+			},
+			{
+				value: 300,
+				text: 'Blog Post (${value} words)',
+				icon: '📖',
+				color: '#8B5CF6',
+			},
+			{
+				value: 500,
+				text: 'Long Article (${value} words)',
+				icon: '📚',
+				color: '#EC4899',
+			},
+			{
+				value: 1000,
+				text: 'Essay (${value} words)',
+				icon: '🎓',
+				color: '#DC2626',
+			},
+		],
+		[]
+	);
+
+	// Define word count ranges with metadata for email drafts (original SliderSpell)
 	const wordCountRanges: RangeMetadata[] = useMemo(
 		() => [
 			{
@@ -216,7 +267,17 @@ export function useSmailCedarSpells() {
 		[]
 	);
 
-	// Handle slider value changes
+	// Handle range slider value changes (RangeSliderSpell)
+	const handleRangeSliderChange = (value: number, optionIndex: number) => {
+		// Update Cedar state
+		const setCedarState = useCedarStore.getState().setCedarState;
+		setCedarState('draftSliderState', {
+			isActive: true,
+			wordCount: value,
+		});
+	};
+
+	// Handle original slider value changes (SliderSpell)
 	const handleSliderChange = (value: number) => {
 		// Update Cedar state
 		const setCedarState = useCedarStore.getState().setCedarState;
@@ -226,7 +287,53 @@ export function useSmailCedarSpells() {
 		});
 	};
 
-	// Handle slider completion - uses rewriteDraftWorkflow with agent
+	// Handle range slider completion - uses rewriteDraftWorkflow with agent (RangeSliderSpell)
+	const handleRangeSliderComplete = async (
+		value: number,
+		optionIndex: number
+	) => {
+		// Update Cedar state
+		const setCedarState = useCedarStore.getState().setCedarState;
+		setCedarState('draftSliderState', {
+			isActive: false,
+			wordCount: value,
+		});
+
+		// Get current compose draft if available
+		const { composeData, isComposeOpen } = useEmailStore.getState();
+
+		// Determine current draft source
+		const currentDraft = {
+			subject: composeData?.subject || '',
+			body: composeData?.body || '',
+		};
+
+		// Only proceed if there's content to rewrite
+		if (isComposeOpen) {
+			// Get the selected option
+			const selectedOption = wordCountOptions[optionIndex];
+			const rangeName = selectedOption.text.replace(
+				'${value}',
+				value.toString()
+			);
+
+			// Call the rewrite workflow
+			await rewriteDraftWorkflow({
+				prompt: `Rewrite this email to match the target word count while maintaining the key message and appropriate tone for the ${rangeName} length.`,
+				wordCount: value,
+				currentDraft,
+				rangeContext: {
+					min: value - 10, // Approximate range
+					max: value + 10,
+					rangeName,
+				},
+			});
+		} else {
+			// No active draft to rewrite
+		}
+	};
+
+	// Handle original slider completion - uses rewriteDraftWorkflow with agent (SliderSpell)
 	const handleSliderComplete = async (value: number) => {
 		// Update Cedar state
 		const setCedarState = useCedarStore.getState().setCedarState;
@@ -281,10 +388,27 @@ export function useSmailCedarSpells() {
 	);
 
 	const draftLengthSlider = (
-		<SliderSpell
+		<RangeSliderSpell
 			spellId='email-draft-length-slider'
 			activationConditions={{
 				events: ['t'],
+				mode: ActivationMode.HOLD,
+			}}
+			rangeSliderConfig={{
+				options: wordCountOptions,
+				unit: ' words',
+				proportionalSpacing: false,
+			}}
+			onComplete={handleRangeSliderComplete}
+			onChange={handleRangeSliderChange}
+		/>
+	);
+
+	const originalDraftLengthSlider = (
+		<SliderSpell
+			spellId='email-draft-length-slider-original'
+			activationConditions={{
+				events: ['r'],
 				mode: ActivationMode.HOLD,
 			}}
 			sliderConfig={{
@@ -300,7 +424,7 @@ export function useSmailCedarSpells() {
 		/>
 	);
 
-	return { radialMenu, draftLengthSlider };
+	return { radialMenu, draftLengthSlider, originalDraftLengthSlider };
 }
 
 export default useSmailCedarSpells;
