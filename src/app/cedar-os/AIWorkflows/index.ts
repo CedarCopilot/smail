@@ -7,11 +7,6 @@ export {
 	type GenerateDraftInput,
 	type GenerateDraftOutput,
 } from './generateDraft';
-export {
-	rewriteDraft,
-	type RewriteDraftInput,
-	type RewriteDraftOutput,
-} from './rewriteDraft';
 export { scheduleMeetingWorkflow } from './scheduleMeeting';
 export { politeRejectionWorkflow } from './politeRejection';
 export { followUpWorkflow } from './followUp';

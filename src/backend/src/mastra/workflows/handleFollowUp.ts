@@ -15,8 +15,8 @@ export async function handleFollowUp(c: Context) {
 				stateKey: 'emailDraft',
 				setterKey: 'draftReply',
 				args: [
-					"Dear [Recipient Name],\n\nI hope you're doing well. I wanted to follow up on our previous conversation regarding [topic].\n\nI understand you may be busy, but I wanted to check if you had a chance to consider my previous message. Please let me know if you need any additional information.\n\nLooking forward to hearing from you.\n\nBest regards,\n[Your Name]",
-					'Following Up - [Original Subject]',
+					"Dear Avery,\n\nI hope you're doing well. I wanted to follow up on our previous conversation regarding our upcoming meeting about security issues.\n\nI understand you may be busy, but I wanted to check if you had a chance to consider my previous message. Please let me know if you need any additional information.\n\nLooking forward to hearing from you.\n\nBest regards,\n[Your Name]",
+					'Following Up',
 				],
 			});
 			await new Promise((resolve) => setTimeout(resolve, 100));

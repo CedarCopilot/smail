@@ -15,7 +15,7 @@ export async function handleThankYou(c: Context) {
 				stateKey: 'emailDraft',
 				setterKey: 'draftReply',
 				args: [
-					'Dear [Recipient Name],\n\nI wanted to take a moment to express my sincere gratitude for [specific reason]. Your assistance and support have been invaluable.\n\nThank you once again for your time and consideration.\n\nWith appreciation,\n[Your Name]',
+					'Dear Avery Chen,\n\nI wanted to take a moment to express my sincere gratitude for your assistance and support. Your assistance and support have been invaluable.\n\nThank you once again for your time and consideration.\n\nWith appreciation,\nJesse',
 					'Thank You',
 				],
 			});

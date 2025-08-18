@@ -15,7 +15,7 @@ export async function handlePoliteRejection(c: Context) {
 				stateKey: 'emailDraft',
 				setterKey: 'draftReply',
 				args: [
-					"Dear [Recipient Name],\n\nThank you for reaching out and for your interest. After careful consideration, I regret to inform you that I won't be able to proceed with this opportunity at this time.\n\nI appreciate your understanding and wish you the best with your endeavors.\n\nBest regards,\n[Your Name]",
+					"Dear Avery Chen,\n\nThank you for reaching out and for your interest. After careful consideration, I regret to inform you that I won't be able to proceed with this opportunity at this time.\n\nI appreciate your understanding and wish you the best with your endeavors.\n\nBest regards,\nJesse",
 					'Re: Your Request',
 				],
 			});
