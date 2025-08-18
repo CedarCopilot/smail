@@ -332,14 +332,16 @@ export function ComposeEmail({ draftId, inline = false }: ComposeEmailProps) {
 
 					{/* Body */}
 					<div
-						className={`flex-1 p-4 ${inline ? 'min-h-[200px]' : ''} relative`}>
+						className={`flex-1 p-4 ${inline ? 'min-h-[200px]' : ''} relative overflow-hidden`}>
 						<AnimatePresence mode='wait'>
 							{isSliderActive ? (
-								<PhantomText
-									key='phantom'
-									wordCount={phantomWordCount}
-									className='text-sm leading-relaxed'
-								/>
+								<div className='w-full h-full overflow-y-auto'>
+									<PhantomText
+										key='phantom'
+										wordCount={phantomWordCount}
+										className='text-sm leading-relaxed text-gray-500'
+									/>
+								</div>
 							) : (
 								<textarea
 									key='textarea'
