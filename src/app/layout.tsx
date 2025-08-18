@@ -5,7 +5,7 @@ import { CedarCopilot } from 'cedar-os';
 import type { ProviderConfig, ActivationConditions } from 'cedar-os';
 import { Hotkey, ActivationMode } from 'cedar-os';
 
-import { Mail, Reply, Forward, Archive, Trash2 } from 'lucide-react';
+import { Mail, Calendar, ThumbsDown, UserCheck, Heart } from 'lucide-react';
 import { Header } from './layout/Header';
 import { Sidebar } from './layout/Sidebar';
 import { ComposeManager } from './drafts/ComposeManager';
@@ -20,6 +20,7 @@ import { useRouter } from 'next/navigation';
 import './globals.css';
 import { messageRenderers } from '@/app/cedar-os/messageRenderers';
 import { useCedarStore, useRegisterState } from 'cedar-os';
+import { generateDraft, rewriteDraft } from '@/app/cedar-os/AIWorkflows';
 
 function RootLayout({ children }: { children: ReactNode }) {
 	const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -48,62 +49,140 @@ function RootLayout({ children }: { children: ReactNode }) {
 		[]
 	);
 
-	// Define radial menu items for common email actions
+	// Define radial menu items for AI-based email drafters
 	const menuItems: RadialMenuItem[] = useMemo(
 		() => [
 			{
-				title: 'Reply',
-				icon: Reply,
-				onInvoke: () => {
-					// For global menu, we need to get the current email from the URL
+				title: 'Schedule Meeting',
+				icon: Calendar,
+				onInvoke: async () => {
+					// Get current email context if available
 					const emailId = pathname?.split('/inbox/')[1];
-					if (emailId) {
-						const emails = useEmailStore.getState().emails;
-						const email = emails.find((e) => e.id === emailId);
-						if (email) {
-							openCompose('reply', email);
-						}
-					}
+					const emails = useEmailStore.getState().emails;
+					const currentEmail = emailId
+						? emails.find((e) => e.id === emailId)
+						: null;
+
+					// Generate draft using AI workflow
+					const draft = await generateDraft({
+						prompt: 'Generate a professional email to schedule a meeting',
+						context: {
+							recipientName: currentEmail?.from?.name,
+							recipientEmail: currentEmail?.from?.email,
+						},
+					});
+
+					// Open compose with the generated draft
+					openCompose('new');
+					// Update the compose data with the generated draft
+					useEmailStore.getState().updateComposeData({
+						subject: draft.subject,
+						body: draft.body,
+					});
+
+					console.log('Generated meeting schedule draft:', draft);
 				},
 			},
 			{
-				title: 'Forward',
-				icon: Forward,
-				onInvoke: () => {
+				title: 'Polite Rejection',
+				icon: ThumbsDown,
+				onInvoke: async () => {
 					const emailId = pathname?.split('/inbox/')[1];
-					if (emailId) {
-						const emails = useEmailStore.getState().emails;
-						const email = emails.find((e) => e.id === emailId);
-						if (email) {
-							openCompose('forward', email);
-						}
+					const emails = useEmailStore.getState().emails;
+					const currentEmail = emailId
+						? emails.find((e) => e.id === emailId)
+						: null;
+
+					const draft = await generateDraft({
+						prompt:
+							'Generate a polite rejection email that declines an offer or request professionally',
+						context: {
+							recipientName: currentEmail?.from?.name,
+							recipientEmail: currentEmail?.from?.email,
+							originalEmail: currentEmail?.body,
+						},
+					});
+
+					if (currentEmail) {
+						openCompose('reply', currentEmail);
+					} else {
+						openCompose('new');
 					}
+					// Update the compose data with the generated draft
+					useEmailStore.getState().updateComposeData({
+						subject: draft.subject,
+						body: draft.body,
+					});
+
+					console.log('Generated polite rejection draft:', draft);
 				},
 			},
 			{
-				title: 'Archive',
-				icon: Archive,
-				onInvoke: () => {
+				title: 'Follow Up',
+				icon: UserCheck,
+				onInvoke: async () => {
 					const emailId = pathname?.split('/inbox/')[1];
-					if (emailId) {
-						console.log('Archive email:', emailId);
-						router.push('/inbox');
+					const emails = useEmailStore.getState().emails;
+					const currentEmail = emailId
+						? emails.find((e) => e.id === emailId)
+						: null;
+
+					const draft = await generateDraft({
+						prompt:
+							'Generate a follow-up email to check on previous conversation or request',
+						context: {
+							recipientName: currentEmail?.from?.name,
+							recipientEmail: currentEmail?.from?.email,
+							originalEmail: currentEmail?.body,
+						},
+					});
+
+					if (currentEmail) {
+						openCompose('reply', currentEmail);
+					} else {
+						openCompose('new');
 					}
+					// Update the compose data with the generated draft
+					useEmailStore.getState().updateComposeData({
+						subject: draft.subject,
+						body: draft.body,
+					});
+
+					console.log('Generated follow-up draft:', draft);
 				},
 			},
 			{
-				title: 'Delete',
-				icon: Trash2,
-				onInvoke: () => {
+				title: 'Thank You',
+				icon: Heart,
+				onInvoke: async () => {
 					const emailId = pathname?.split('/inbox/')[1];
-					if (emailId) {
-						moveToTrash([emailId]);
-						router.push('/inbox');
-					}
+					const emails = useEmailStore.getState().emails;
+					const currentEmail = emailId
+						? emails.find((e) => e.id === emailId)
+						: null;
+
+					const draft = await generateDraft({
+						prompt:
+							'Generate a thank you email expressing appreciation and gratitude',
+						context: {
+							recipientName: currentEmail?.from?.name,
+							recipientEmail: currentEmail?.from?.email,
+						},
+					});
+
+					// Open compose with the generated draft
+					openCompose('new');
+					// Update the compose data with the generated draft
+					useEmailStore.getState().updateComposeData({
+						subject: draft.subject,
+						body: draft.body,
+					});
+
+					console.log('Generated thank you draft:', draft);
 				},
 			},
 		],
-		[pathname, openCompose, moveToTrash, router]
+		[pathname, openCompose]
 	);
 
 	// Activation conditions for 'g' key hold
@@ -175,8 +254,8 @@ function RootLayout({ children }: { children: ReactNode }) {
 		});
 	};
 
-	// Handle slider completion
-	const handleSliderComplete = (value: number) => {
+	// Handle slider completion - now uses rewriteDraft workflow
+	const handleSliderComplete = async (value: number) => {
 		// Value is already the word count
 		// Update Cedar state
 		const setCedarState = useCedarStore.getState().setCedarState;
@@ -185,8 +264,30 @@ function RootLayout({ children }: { children: ReactNode }) {
 			wordCount: value,
 		});
 
-		// TODO: Here we'll trigger the actual draft redrafting
-		console.log('Email draft slider completed:', value, 'words');
+		// Get current compose draft if available
+		const { composeData, isComposeOpen } = useEmailStore.getState();
+		if (isComposeOpen && composeData) {
+			// Rewrite the current draft with the target word count
+			const rewrittenDraft = await rewriteDraft({
+				prompt:
+					'Rewrite this email to match the target word count while maintaining the key message',
+				wordNum: value,
+				originalDraft: {
+					subject: composeData.subject || '',
+					body: composeData.body || '',
+				},
+			});
+
+			// Update the compose draft with the rewritten version
+			useEmailStore.getState().updateComposeData({
+				subject: rewrittenDraft.subject,
+				body: rewrittenDraft.body,
+			});
+
+			console.log('Email draft rewritten:', rewrittenDraft);
+		} else {
+			console.log('No active draft to rewrite. Target word count:', value);
+		}
 	};
 
 	return (
