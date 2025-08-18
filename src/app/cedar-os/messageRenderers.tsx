@@ -6,7 +6,11 @@ import {
 	Message,
 } from 'cedar-os';
 import Flat3dContainer from '@/app/cedar-os/components/containers/Flat3dContainer';
-import { CheckCircle, Circle } from 'lucide-react';
+import ColouredContainer from '@/app/cedar-os/components/structural/ColouredContainer';
+import ColouredContainerItem from '@/app/cedar-os/components/structural/ColouredContainerItem';
+import { CheckCircle, Circle, Clock } from 'lucide-react';
+import { itemVariants } from '@/app/cedar-os/components/structural/animationVariants';
+import { motion } from 'motion/react';
 //
 // ------------------------------------------------
 // Helpers
@@ -45,6 +49,87 @@ function extractQuery(args: unknown): string {
 		}
 	}
 	return '';
+}
+
+function formatDateTime(isoString: string): string {
+	const date = new Date(isoString);
+	const now = new Date();
+
+	// Get day of week
+	const dayNames = [
+		'Sunday',
+		'Monday',
+		'Tuesday',
+		'Wednesday',
+		'Thursday',
+		'Friday',
+		'Saturday',
+	];
+	const monthNames = [
+		'Jan',
+		'Feb',
+		'Mar',
+		'Apr',
+		'May',
+		'Jun',
+		'Jul',
+		'Aug',
+		'Sep',
+		'Oct',
+		'Nov',
+		'Dec',
+	];
+
+	const dayOfWeek = dayNames[date.getDay()];
+	const month = monthNames[date.getMonth()];
+	const dayOfMonth = date.getDate();
+	const year = date.getFullYear();
+
+	// Get ordinal suffix
+	const getOrdinalSuffix = (day: number) => {
+		if (day >= 11 && day <= 13) return 'th';
+		switch (day % 10) {
+			case 1:
+				return 'st';
+			case 2:
+				return 'nd';
+			case 3:
+				return 'rd';
+			default:
+				return 'th';
+		}
+	};
+
+	// Format time
+	const hours = date.getHours();
+	const minutes = date.getMinutes();
+	const ampm = hours >= 12 ? 'pm' : 'am';
+	const displayHours = hours % 12 || 12;
+	const timeString =
+		minutes === 0
+			? `${displayHours}${ampm}`
+			: `${displayHours}:${minutes.toString().padStart(2, '0')}${ampm}`;
+
+	// Check if it's today, tomorrow, or this week
+	const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+	const tomorrow = new Date(today);
+	tomorrow.setDate(tomorrow.getDate() + 1);
+	const dateOnly = new Date(
+		date.getFullYear(),
+		date.getMonth(),
+		date.getDate()
+	);
+
+	// Format: "2am Today - Monday, Aug 18th"
+	const shortDate = `${dayOfWeek}, ${month} ${dayOfMonth}${getOrdinalSuffix(dayOfMonth)}`;
+
+	if (dateOnly.getTime() === today.getTime()) {
+		return `${timeString} Today - ${shortDate}`;
+	} else if (dateOnly.getTime() === tomorrow.getTime()) {
+		return `${timeString} Tomorrow - ${shortDate}`;
+	} else {
+		return `${timeString} ${shortDate}`;
+	}
 }
 
 const toolCallPhrases: Record<string, (payload: ToolCallPayload) => string> = {
@@ -101,16 +186,37 @@ export const toolResultMessageRenderer: MessageRenderer<CustomToolMessage> = {
 		if (isCalendarResult(result)) {
 			// Calendar tool result
 			return (
-				<div className='text-sm space-y-2'>
-					<div className='font-medium'>Available times</div>
-					<ul className='list-disc pl-5 space-y-1'>
-						{result.availableTimes.map((t: string, idx: number) => (
-							<li key={idx}>{t}</li>
-						))}
-					</ul>
-					{toolName && (
-						<div className='text-xs text-gray-500'>Source: {toolName}</div>
-					)}
+				<div className='space-y-3 w-full'>
+					<motion.div
+						variants={itemVariants}
+						className='flex items-center justify-between mb-2'>
+						<div className='flex items-center gap-3'>
+							<div className='rounded-2xl bg-blue-500/10 backdrop-blur-sm'>
+								<Clock className='w-6 h-6 text-blue-500' />
+							</div>
+							<h3 className='text-lg font-bold'>Available Times</h3>
+						</div>
+					</motion.div>
+
+					<motion.div
+						variants={itemVariants}
+						className='space-y-3 text-muted-foreground'>
+						{toolName && (
+							<div className='text-xs text-gray-500'>Source: {toolName}</div>
+						)}
+					</motion.div>
+
+					{result.availableTimes.map((t: string, idx: number) => (
+						<ColouredContainer
+							key={idx}
+							color='blue'
+							className='text-sm w-full'>
+							<div className='flex items-center gap-2'>
+								<Clock size={16} className='text-blue-600 flex-shrink-0' />
+								<span className=''>{formatDateTime(t)}</span>
+							</div>
+						</ColouredContainer>
+					))}
 				</div>
 			);
 		}
