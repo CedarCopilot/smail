@@ -11,6 +11,7 @@ import ColouredContainerItem from '@/app/cedar-os/components/structural/Coloured
 import { CheckCircle, Circle, Clock } from 'lucide-react';
 import { itemVariants } from '@/app/cedar-os/components/structural/animationVariants';
 import { motion } from 'motion/react';
+import { ShimmerText } from '@/app/cedar-os/components/text/ShimmerText';
 //
 // ------------------------------------------------
 // Helpers
@@ -194,7 +195,7 @@ export const toolResultMessageRenderer: MessageRenderer<CustomToolMessage> = {
 							<div className='rounded-2xl bg-blue-500/10 backdrop-blur-sm'>
 								<Clock className='w-6 h-6 text-blue-500' />
 							</div>
-							<h3 className='text-lg font-bold'>Available Times</h3>
+							<div className='text-md font-semibold'>Available Times</div>
 						</div>
 					</motion.div>
 
@@ -289,29 +290,15 @@ export const toolCallMessageRenderer: MessageRenderer<CustomToolCallMessage> = {
 		const phraseResolver = toolCallPhrases[toolName];
 		const text = phraseResolver ? phraseResolver(toolPayload) : 'Working...';
 		const completed = message.metadata?.complete ?? false;
-		if (completed === true) {
-			return (
-				<Flat3dContainer className='p-3 opacity-50 my-2'>
-					<div className='flex flex-row items-center justify-between w-full'>
-						<div className='text-sm font-medium line-through text-gray-500'>
-							{text}
-						</div>
-						<CheckCircle size={16} className='text-green-700' />
-					</div>
-				</Flat3dContainer>
-			);
-		}
 
-		if (completed === false) {
-			return (
-				<Flat3dContainer className='p-3 my-2'>
-					<div className='flex flex-row items-center justify-between w-full'>
-						<div className='text-sm font-medium'>{text}</div>
-						<Circle size={16} className='text-gray-500' />
-					</div>
-				</Flat3dContainer>
-			);
-		}
+		// Map completion state to ShimmerText state
+		const shimmerState = completed === true ? 'complete' : 'in_progress';
+
+		return (
+			<ColouredContainer color='grey' className='mb-2'>
+				<ShimmerText text={text} state={shimmerState} />
+			</ColouredContainer>
+		);
 	},
 };
 

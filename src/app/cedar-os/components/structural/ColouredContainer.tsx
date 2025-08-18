@@ -4,7 +4,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { containerVariants } from './animationVariants';
 
-export type ColorVariant = 'blue' | 'green' | 'purple';
+export type ColorVariant = 'blue' | 'green' | 'purple' | 'grey';
 
 interface ColouredContainerProps {
 	children: React.ReactNode;
@@ -25,6 +25,12 @@ const getColorClasses = (color: ColorVariant) => {
 				container:
 					'bg-gradient-to-br from-purple-500/5 via-purple-500/10 to-purple-500/5 border border-purple-500/20 hover:border-purple-500/40',
 				overlay: 'bg-gradient-to-br from-purple-500/5 to-transparent',
+			};
+		case 'grey':
+			return {
+				container:
+					'bg-gradient-to-br from-gray-500/5 via-gray-500/10 to-gray-500/5 border border-gray-500/20 hover:border-gray-500/40',
+				overlay: 'bg-gradient-to-br from-gray-500/5 to-transparent',
 			};
 		case 'blue':
 		default:

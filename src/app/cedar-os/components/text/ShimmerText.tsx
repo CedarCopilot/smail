@@ -1,7 +1,7 @@
 import { motion } from 'motion/react';
 import React from 'react';
 import { useStyling } from 'cedar-os';
-import { Hammer, Check, X, Brain } from 'lucide-react';
+import { Hammer, Check, X, Brain, Loader } from 'lucide-react';
 
 interface ShimmerTextProps {
 	text: string;
@@ -13,12 +13,14 @@ export const ShimmerText: React.FC<ShimmerTextProps> = ({ text, state }) => {
 	const isComplete = state === 'complete';
 	const isError = state === 'error';
 	const isThinking = state === 'thinking';
+	const isInProgress = state === 'in_progress';
 	const { styling } = useStyling();
 	const isDark = styling.darkMode ?? false;
 
 	const grey = isDark ? '#475569' : '#6B7280';
 	const highlight = isDark ? '#FFFFFF' : '#000000';
 	const errorColor = isDark ? '#DC2626' : '#EF4444';
+	const greenColor = '#22C55E'; // Green for checkmark
 	const stagger = 0.03;
 	const duration = text.length * 0.13;
 
@@ -29,7 +31,9 @@ export const ShimmerText: React.FC<ShimmerTextProps> = ({ text, state }) => {
 			? Check
 			: isThinking
 				? Brain
-				: Hammer;
+				: isInProgress
+					? Loader
+					: Hammer;
 
 	return (
 		<div
@@ -40,26 +44,48 @@ export const ShimmerText: React.FC<ShimmerTextProps> = ({ text, state }) => {
 			<motion.span
 				key='icon'
 				className='mr-1'
-				initial={{ color: isError ? errorColor : grey }}
-				/* Only animate when in progress or thinking */
+				initial={{
+					color: isError ? errorColor : isComplete ? greenColor : grey,
+				}}
+				/* Animate spinning for loader, static green for check, shimmer for others */
 				animate={
 					isComplete
-						? { color: grey }
+						? { color: greenColor }
 						: isError
 							? { color: errorColor }
-							: { color: [grey, grey, highlight, grey, grey] }
+							: isInProgress
+								? {
+										color: grey,
+										rotate: 360,
+									}
+								: { color: [grey, grey, highlight, grey, grey] }
 				}
 				transition={
 					isComplete || isError
 						? undefined
-						: {
-								duration,
-								repeat: Infinity,
-								delay: 0,
-								ease: 'easeInOut',
-							}
+						: isInProgress
+							? {
+									rotate: {
+										duration: 1.5,
+										repeat: Infinity,
+										ease: 'linear',
+									},
+								}
+							: {
+									duration,
+									repeat: Infinity,
+									delay: 0,
+									ease: 'easeInOut',
+								}
 				}
-				style={{ willChange: isComplete || isError ? undefined : 'color' }}>
+				style={{
+					willChange:
+						isComplete || isError
+							? undefined
+							: isInProgress
+								? 'transform'
+								: 'color',
+				}}>
 				<IconComponent
 					size={12}
 					aria-label={
@@ -69,7 +95,9 @@ export const ShimmerText: React.FC<ShimmerTextProps> = ({ text, state }) => {
 								? 'error icon'
 								: isThinking
 									? 'thinking icon'
-									: 'tool icon'
+									: isInProgress
+										? 'loading icon'
+										: 'tool icon'
 					}
 				/>
 			</motion.span>
