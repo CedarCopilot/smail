@@ -5,57 +5,15 @@ import {
 	ActionMessageFor,
 	Message,
 } from 'cedar-os';
-import TodoList from '@/app/cedar-os/components/chatMessages/TodoList';
 import Flat3dContainer from '@/app/cedar-os/components/containers/Flat3dContainer';
-import { Check, CheckCircle, Circle } from 'lucide-react';
-
-type SearchPersonToolResultPayload = {
-	toolCallId: string;
-	toolName: string;
-	result: {
-		name: string;
-		role: string;
-		emailStyleSummary: string;
-		notes: string[];
-	};
-};
-
-type CheckCalendarToolResultPayload = {
-	toolCallId: string;
-	toolName: string;
-	result: {
-		availableTimes: string[];
-	};
-};
-
-export type ToolResultPayload =
-	| SearchPersonToolResultPayload
-	| CheckCalendarToolResultPayload;
-
-type CustomToolMessage = CustomMessage<
-	'tool-result',
-	MastraStreamedResponse & {
-		type: 'tool-result';
-		payload: ToolResultPayload;
-	}
->;
+import { CheckCircle, Circle } from 'lucide-react';
+//
+// ------------------------------------------------
+// Helpers
+// ------------------------------------------------
 
 type PersonResult = SearchPersonToolResultPayload['result'];
 type CalendarResult = CheckCalendarToolResultPayload['result'];
-
-type ToolCallPayload = {
-	toolCallId?: string;
-	toolName?: string;
-	args?: unknown;
-};
-
-type CustomToolCallMessage = CustomMessage<
-	'tool-call',
-	MastraStreamedResponse & {
-		type: 'tool-call';
-		payload: ToolCallPayload;
-	}
->;
 
 function isCalendarResult(
 	result: PersonResult | CalendarResult | undefined
@@ -98,48 +56,47 @@ const toolCallPhrases: Record<string, (payload: ToolCallPayload) => string> = {
 	writeEmailTool: () => 'Write response email',
 };
 
-export const toolCallMessageRenderer: MessageRenderer<CustomToolCallMessage> = {
-	type: 'tool-call',
-	render: (message) => {
-		const toolPayload = (message as CustomToolCallMessage).payload;
-		const toolName = toolPayload.toolName || '';
-		const phraseResolver = toolCallPhrases[toolName];
-		const text = phraseResolver ? phraseResolver(toolPayload) : 'Working...';
-		const completed = (message.metadata?.complete as boolean) ?? false;
-		if (completed === true) {
-			return (
-				<Flat3dContainer className='p-3 opacity-50 my-2'>
-					<div className='flex flex-row items-center justify-between w-full'>
-						<div className='text-sm font-medium line-through text-gray-500'>
-							{text}
-						</div>
-						<CheckCircle size={16} className='text-green-700' />
-					</div>
-				</Flat3dContainer>
-			);
-		}
-
-		if (completed === false) {
-			return (
-				<Flat3dContainer className='p-3 my-2'>
-					<div className='flex flex-row items-center justify-between w-full'>
-						<div className='text-sm font-medium'>{text}</div>
-						<Circle size={16} className='text-gray-500' />
-					</div>
-				</Flat3dContainer>
-			);
-		}
-	},
+// ------------------------------------------------
+// TOOL RESULT RENDERING
+// ------------------------------------------------
+type SearchPersonToolResultPayload = {
+	toolCallId: string;
+	toolName: string;
+	result: {
+		name: string;
+		role: string;
+		emailStyleSummary: string;
+		notes: string[];
+	};
 };
 
+type CheckCalendarToolResultPayload = {
+	toolCallId: string;
+	toolName: string;
+	result: {
+		availableTimes: string[];
+	};
+};
+
+export type ToolResultPayload =
+	| SearchPersonToolResultPayload
+	| CheckCalendarToolResultPayload;
+
+type CustomToolMessage = CustomMessage<
+	'tool-result',
+	MastraStreamedResponse & {
+		type: 'tool-result';
+		payload: ToolResultPayload;
+	}
+>;
+
+// Render tool result messages
 export const toolResultMessageRenderer: MessageRenderer<CustomToolMessage> = {
 	type: 'tool-result',
 	render: (message) => {
-		const toolPayload = (message as CustomToolMessage).payload;
-		const toolName: string | undefined = (
-			toolPayload as SearchPersonToolResultPayload
-		)?.toolName;
-		const result = (toolPayload as SearchPersonToolResultPayload)?.result;
+		const toolPayload = message.payload;
+		const toolName: string | undefined = toolPayload?.toolName;
+		const result = toolPayload?.result;
 
 		if (isCalendarResult(result)) {
 			// Calendar tool result
@@ -199,10 +156,66 @@ export const toolResultMessageRenderer: MessageRenderer<CustomToolMessage> = {
 	},
 };
 
+// ------------------------------------------------
+// TOOL CALL RENDERING
+// ------------------------------------------------
+type ToolCallPayload = {
+	toolCallId?: string;
+	toolName?: string;
+	args?: unknown;
+};
+
+type CustomToolCallMessage = CustomMessage<
+	'tool-call', // type field of custom message
+	MastraStreamedResponse & {
+		type: 'tool-call';
+		payload: ToolCallPayload;
+	}
+>;
+
+// Render tool call messages
+export const toolCallMessageRenderer: MessageRenderer<CustomToolCallMessage> = {
+	type: 'tool-call',
+	render: (message) => {
+		// Narrowly typed message
+		const toolPayload = message.payload;
+		const toolName = toolPayload.toolName || '';
+		const phraseResolver = toolCallPhrases[toolName];
+		const text = phraseResolver ? phraseResolver(toolPayload) : 'Working...';
+		const completed = message.metadata?.complete ?? false;
+		if (completed === true) {
+			return (
+				<Flat3dContainer className='p-3 opacity-50 my-2'>
+					<div className='flex flex-row items-center justify-between w-full'>
+						<div className='text-sm font-medium line-through text-gray-500'>
+							{text}
+						</div>
+						<CheckCircle size={16} className='text-green-700' />
+					</div>
+				</Flat3dContainer>
+			);
+		}
+
+		if (completed === false) {
+			return (
+				<Flat3dContainer className='p-3 my-2'>
+					<div className='flex flex-row items-center justify-between w-full'>
+						<div className='text-sm font-medium'>{text}</div>
+						<Circle size={16} className='text-gray-500' />
+					</div>
+				</Flat3dContainer>
+			);
+		}
+	},
+};
+
+// ------------------------------------------------
+// ACTION RENDERING (frontend state changes)
+// ------------------------------------------------
 export type ActionResultMessage = ActionMessageFor<
-	'emailDraft',
-	'draftReply',
-	[string]
+	'emailDraft', // state key
+	'draftReply', // setter key
+	[string] // args
 >;
 
 export const actionResultMessageRenderer: MessageRenderer<ActionResultMessage> =
@@ -220,6 +233,7 @@ export const actionResultMessageRenderer: MessageRenderer<ActionResultMessage> =
 		},
 	};
 
+// Export all message renderers to register with Cedar OS
 export const messageRenderers = [
 	toolCallMessageRenderer,
 	toolResultMessageRenderer,
