@@ -14,7 +14,7 @@ import {
 	politeRejectionWorkflow,
 	followUpWorkflow,
 	thankYouWorkflow,
-} from '@/app/cedar-os/workflows';
+} from '@/app/cedar-os/AIWorkflows';
 import {
 	Hotkey,
 	ActivationMode,

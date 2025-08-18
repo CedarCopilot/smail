@@ -14,6 +14,7 @@ import './globals.css';
 import { messageRenderers } from '@/app/cedar-os/messageRenderers';
 import { responseProcessors } from '@/app/cedar-os/responseProcessors';
 import { useSmailCedarSpells } from '@/app/cedar-os/useSmailCedarSpells';
+import { llmProvider, voiceSettings } from '@/app/cedar-os/configs';
 
 function RootLayout({ children }: { children: ReactNode }) {
 	const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -25,16 +26,6 @@ function RootLayout({ children }: { children: ReactNode }) {
 		[pathname]
 	);
 
-	const llmProvider = useMemo<ProviderConfig>(
-		() => ({
-			provider: 'mastra',
-			baseURL: process.env.NEXT_PUBLIC_MASTRA_URL || 'http://localhost:4112',
-			apiKey: process.env.NEXT_PUBLIC_MASTRA_API_KEY,
-			voiceRoute: '/voice',
-		}),
-		[]
-	);
-
 	return (
 		<html lang='en'>
 			<body>
@@ -42,10 +33,7 @@ function RootLayout({ children }: { children: ReactNode }) {
 					llmProvider={llmProvider}
 					messageRenderers={messageRenderers}
 					responseProcessors={responseProcessors}
-					voiceSettings={{
-						useBrowserTTS: false,
-						stream: true,
-					}}>
+					voiceSettings={voiceSettings}>
 					<SidePanelCedarChat
 						side='right'
 						title='Email Assistant'
