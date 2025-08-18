@@ -53,7 +53,6 @@ export const toolResultMessageRenderer: MessageRenderer<CustomToolMessage> = {
     const toolName: string | undefined = (toolPayload as SearchPersonToolResultPayload)?.toolName;
     const result = (toolPayload as SearchPersonToolResultPayload)?.result;
 
-    console.log('message', result);
     if (isCalendarResult(result)) {
       // Calendar tool result
       return (
