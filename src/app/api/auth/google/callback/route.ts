@@ -12,11 +12,11 @@ export async function GET(request: NextRequest) {
 		// Check for errors from Google
 		if (error) {
 			console.error('Google auth error:', error);
-			return NextResponse.redirect('?error=auth_denied');
+			return NextResponse.redirect(new URL('/?error=auth_denied', request.url));
 		}
 
 		if (!code) {
-			return NextResponse.redirect(');
+			return NextResponse.redirect(new URL('/?error=no_code', request.url));
 		}
 
 		// Verify state to prevent CSRF
@@ -25,14 +25,18 @@ export async function GET(request: NextRequest) {
 
 		if (!savedState || savedState !== state) {
 			console.error('State mismatch');
-			return NextResponse.redirect('smatch');
+			return NextResponse.redirect(
+				new URL('/?error=state_mismatch', request.url)
+			);
 		}
 
 		// Exchange code for tokens
 		const tokens = await getTokensFromCode(code);
 
 		// Store tokens in cookies (in production, use a secure database)
-		const response = NextResponse.redirect('');
+		const response = NextResponse.redirect(
+			new URL('/?auth=success', request.url)
+		);
 
 		// Store tokens securely
 		response.cookies.set('gmail_tokens', JSON.stringify(tokens), {
@@ -48,6 +52,6 @@ export async function GET(request: NextRequest) {
 		return response;
 	} catch (error) {
 		console.error('Error in Google callback:', error);
-		return NextResponse.redirect('change_failed');
+		return NextResponse.redirect(new URL('/?error=auth_failed', request.url));
 	}
 }
