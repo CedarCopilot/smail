@@ -17,8 +17,12 @@
 		"@mastra/libsql": "^0.11.2",
 		"@mastra/loggers": "^0.10.4",
 		"@mastra/voice-openai": "^0.10.8",
+		"hono": "4.8.9",
 		"zod": "^3.25.76",
 		"zod-to-json-schema": "^3.24.6"
+	},
+	"overrides": {
+		"hono": "4.8.9"
 	},
 	"devDependencies": {
 		"@types/node": "^20.9.0",

@@ -1,12 +1,9 @@
 import { Context } from 'hono';
-import { createSSEStream, streamJSONEvent } from '../../utils/streamUtils';
-import { extractChatInput } from './sharedUtils';
+import { createSSEStream } from '../../utils/streamUtils';
+import { streamJSONEvent } from './handleCustomStream';
 
 export async function handleThankYou(c: Context) {
 	try {
-		const body = await c.req.json();
-		const inputData = extractChatInput(body);
-
 		return createSSEStream(async (controller) => {
 			// Simulate streaming response for thank you
 			streamJSONEvent(controller, {
@@ -15,7 +12,7 @@ export async function handleThankYou(c: Context) {
 				stateKey: 'emailDraft',
 				setterKey: 'draftReply',
 				args: [
-					'Dear [Recipient Name],\n\nI wanted to take a moment to express my sincere gratitude for [specific reason]. Your assistance and support have been invaluable.\n\nThank you once again for your time and consideration.\n\nWith appreciation,\n[Your Name]',
+					'Dear Avery Chen,\n\nI wanted to take a moment to express my sincere gratitude for your assistance and support. Your assistance and support have been invaluable.\n\nThank you once again for your time and consideration.\n\nWith appreciation,\nJesse',
 					'Thank You',
 				],
 			});

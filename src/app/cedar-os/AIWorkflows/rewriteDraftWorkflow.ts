@@ -6,8 +6,6 @@ export const rewriteDraftWorkflow = async (
 	input: RewriteDraftWorkflowInput,
 	messageId?: string
 ) => {
-	const state = useCedarStore.getState();
-
 	if (messageId) {
 		const message = useCedarStore.getState().getMessageById(messageId);
 		useCedarStore.getState().updateMessage(messageId, {
@@ -20,12 +18,13 @@ export const rewriteDraftWorkflow = async (
 		{
 			input,
 			productId: llmProvider.apiKey,
-			additionalContext: state.stringifyAdditionalContext(),
-			threadId: state.getCedarState('userId') as string,
-			userId: state.getCedarState('userId') as string,
 			stream: true,
 			prompt: input.prompt,
 			route: `/chat/rewrite-draft`,
+			// Fields required by backend handler (top-level)
+			wordCount: input.wordCount,
+			currentDraft: input.currentDraft,
+			rangeContext: input.rangeContext,
 		},
 		(event) => {
 			if (event.type === 'object') {
