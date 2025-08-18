@@ -3,8 +3,8 @@ import { Agent } from '@mastra/core/agent';
 import { calendarTools } from '../tools/emailTools';
 
 export const emailAgent = new Agent({
-  name: 'Email Agent',
-  instructions: `
+	name: 'Email Agent',
+	instructions: `
 <role>
 You are an email assistant. Your job is to write emails that are contextually aware of calendar timings and appropriately styled for the recipient.
 </role>
@@ -45,8 +45,8 @@ Do NOT output or reveal the actual email body to the user. After calling write-e
 You must ALWAYS call all three tools (in order) every single time you execute. Always write a response even if you think you don't need to.
 </notes>
   `,
-  model: openai('gpt-4o'),
-  tools: calendarTools,
+	model: openai('gpt-4o'),
+	tools: calendarTools,
 });
 
 /**
