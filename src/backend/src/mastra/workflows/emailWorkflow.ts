@@ -6,37 +6,15 @@
 import { createWorkflow, createStep } from '@mastra/core/workflows';
 import { z } from 'zod';
 import { emailAgent } from '../agents/emailAgent';
-import { streamJSONEvent, streamAudioFromText } from '../../utils/streamUtils';
-import { OpenAIVoice } from '@mastra/voice-openai';
+import { streamJSONEvent } from '../../utils/streamUtils';
+import {
+	handleTextDelta,
+	handleToolCall,
+	handleToolResult,
+} from './handleCustomStream';
+import { createSpeakFunction, handleVoiceOutput } from './voiceUtils';
+import { ChatOutput } from '../apiRegistry';
 import { ActionResponseSchema } from './chatWorkflowTypes';
-
-// ---------------------------------------------
-// Mastra nested streaming – emit placeholder events
-// ---------------------------------------------
-
-/**
- * All possible event types that can be emitted by Mastra primitives when using the
- * new nested streaming support (see https://mastra.ai/blog/nested-streaming-support).
- */
-export type MastraEventType =
-	| 'start'
-	| 'step-start'
-	| 'tool-call'
-	| 'tool-result'
-	| 'step-finish'
-	| 'tool-output'
-	| 'step-result'
-	| 'step-output'
-	| 'finish';
-
-// Intentionally not emitting placeholder events; real nested events come from the agent stream
-
-// Pre-defined sample event objects that follow the shapes shown in the
-// nested-streaming blog post. These are purely illustrative and use mock IDs.
-// (Reference examples removed to avoid unused-variable warnings)
-
-// The emitMastraEvents step will be declared after buildAgentContext to ensure
-// buildAgentContext is defined before we reference it.
 
 export const ChatInputSchema = z.object({
 	prompt: z.string(),
@@ -60,34 +38,12 @@ export const ChatOutputSchema = z.object({
 	usage: z.any().optional(),
 });
 
-export type ChatOutput = z.infer<typeof ChatOutputSchema>;
-
-// 1. fetchContext – passthrough (placeholder)
-const fetchContext = createStep({
-	id: 'fetchContext',
+// Prepare context and build message array for the agent
+const prepareAgentContext = createStep({
+	id: 'prepareAgentContext',
 	description:
-		'Placeholder step – you might want to fetch some information for your agent here',
+		'Extract additional context and build LLM message array for agent',
 	inputSchema: ChatInputSchema,
-	outputSchema: ChatInputSchema.extend({
-		context: z.any().optional(),
-	}),
-	execute: async ({ inputData }) => {
-		// Extract and stringify the `value` object from additionalContext
-		const userPrompt = inputData.prompt;
-		const valueObj =
-			inputData.additionalContext?.currentEmailBeingViewed?.[0]?.data?.value;
-		const additionalContext = valueObj ? JSON.stringify(valueObj) : undefined;
-
-		const result = { ...inputData, prompt: userPrompt, additionalContext };
-		return result;
-	},
-});
-
-// 2. buildAgentContext – build message array
-const buildAgentContext = createStep({
-	id: 'buildAgentContext',
-	description: 'Combine fetched information and build LLM messages',
-	inputSchema: fetchContext.outputSchema,
 	outputSchema: ChatInputSchema.extend({
 		messages: z.array(
 			z.object({
@@ -97,18 +53,15 @@ const buildAgentContext = createStep({
 		),
 	}),
 	execute: async ({ inputData }) => {
-		const {
-			prompt,
-			temperature,
-			maxTokens,
-			streamController,
-			resourceId,
-			threadId,
-			additionalContext,
-		} = inputData;
+		// Extract and stringify the `value` object from additionalContext
+		const userPrompt = inputData.prompt;
+		const valueObj =
+			inputData.additionalContext?.currentEmailBeingViewed?.[0]?.data?.value;
+		const additionalContext = valueObj ? JSON.stringify(valueObj) : undefined;
 
+		// Build message array with user prompt and optional email context
 		const messages = [
-			{ role: 'user' as const, content: prompt },
+			{ role: 'user' as const, content: userPrompt },
 			...(additionalContext
 				? [
 						{
@@ -119,28 +72,21 @@ const buildAgentContext = createStep({
 				: []),
 		];
 
-		const result = {
+		return {
 			...inputData,
 			messages,
-			temperature,
-			maxTokens,
-			streamController,
-			resourceId,
-			threadId,
 			additionalContext,
 		};
-
-		return result;
 	},
 });
 
 // Removed placeholder nested streaming emitter; rely on agent-provided nested streaming
 
-// 3. callAgent – invoke calendarAgent with nested streaming
+// Invoke the email agent with nested streaming support
 const callAgent = createStep({
 	id: 'callAgent',
-	description: 'Invoke the chat agent with options',
-	inputSchema: buildAgentContext.outputSchema,
+	description: 'Invoke the email agent with options',
+	inputSchema: prepareAgentContext.outputSchema,
 	outputSchema: ChatOutputSchema,
 	execute: async ({ inputData }) => {
 		const {
@@ -163,6 +109,7 @@ const callAgent = createStep({
 				text: 'Thinking...',
 			});
 
+			// Use the new streamVNext method to get a stream of all Mastra events
 			const stream = emailAgent.streamVNext(messages, {
 				...(systemPrompt ? ({ instructions: systemPrompt } as const) : {}),
 				temperature,
@@ -170,110 +117,41 @@ const callAgent = createStep({
 				...(resourceId &&
 					threadId && { memory: { resource: resourceId, thread: threadId } }),
 			});
-			const voiceProvider = new OpenAIVoice({
-				speechModel: { apiKey: process.env.OPENAI_API_KEY!, name: 'tts-1' },
-				listeningModel: {
-					apiKey: process.env.OPENAI_API_KEY!,
-					name: 'whisper-1',
-				},
-			});
-			const encoder = new TextEncoder();
-			let pendingText = '';
+			const speakFn = createSpeakFunction();
+			const pendingText = { value: '' };
 
+			// With Cedar, you can handle any event in a custom way to create a custom protocol of communication between your frontend and your backend
 			for await (const chunk of stream) {
 				if (!chunk || !chunk.type) continue;
 				switch (chunk.type) {
-					case 'text-delta': {
-						const text =
-							(chunk as { payload?: { text?: string } }).payload?.text ?? '';
-						if (!text) break;
-						if (isVoice) {
-							pendingText += text;
-						} else {
-							const escaped = text.replace(/\n/g, '\\n');
-							streamController.enqueue(encoder.encode(`data:${escaped}\n\n`));
-						}
+					case 'text-delta':
+						handleTextDelta(chunk, !!isVoice, pendingText, streamController);
 						break;
-					}
-					case 'tool-call': {
-						if (isVoice && pendingText) {
-							const speakFn = (t: string, options?: Record<string, unknown>) =>
-								voiceProvider.speak(
-									t,
-									options as { speaker?: string; speed?: number }
-								) as unknown as Promise<ReadableStream>;
-							await streamAudioFromText(
-								streamController,
-								speakFn,
-								pendingText,
-								{
-									voice: 'alloy',
-									speed: 1.0,
-									eventType: 'audio',
-								}
-							);
-							pendingText = '';
-						}
-						streamJSONEvent(streamController, chunk);
+					case 'tool-call':
+						await handleToolCall(
+							chunk,
+							!!isVoice,
+							pendingText,
+							streamController,
+							speakFn
+						);
 						break;
-					}
-					case 'tool-result': {
-						if (isVoice && pendingText) {
-							const speakFn = (t: string, options?: Record<string, unknown>) =>
-								voiceProvider.speak(
-									t,
-									options as { speaker?: string; speed?: number }
-								) as unknown as Promise<ReadableStream>;
-							await streamAudioFromText(
-								streamController,
-								speakFn,
-								pendingText,
-								{
-									voice: 'alloy',
-									speed: 1.0,
-									eventType: 'audio',
-								}
-							);
-							pendingText = '';
-						}
-						const toolName = chunk.payload?.toolName as string | undefined;
-
-						// If write-email returns, emit a Cedar action to update the compose draft
-						if (toolName === 'writeEmailTool') {
-							const email =
-								(chunk.payload?.result as { email?: string })?.email || '';
-							streamJSONEvent(streamController, chunk);
-							streamJSONEvent(streamController, {
-								type: 'action',
-								stateKey: 'emailDraft',
-								setterKey: 'draftReply',
-								args: [email],
-							});
-							break;
-						}
-
-						// Forward other tool results for custom renderers
-						streamJSONEvent(streamController, chunk);
+					case 'tool-result':
+						await handleToolResult(
+							chunk,
+							!!isVoice,
+							pendingText,
+							streamController,
+							speakFn
+						);
 						break;
-					}
 				}
 			}
 
-			// Access convenience promises exposed by the stream
 			const finalResult = stream.text;
 
-			if (isVoice && pendingText) {
-				const speakFn = (t: string, options?: Record<string, unknown>) =>
-					voiceProvider.speak(
-						t,
-						options as { speaker?: string; speed?: number }
-					) as unknown as Promise<ReadableStream>;
-				await streamAudioFromText(streamController, speakFn, pendingText, {
-					voice: 'alloy',
-					speed: 1.0,
-					eventType: 'audio',
-				});
-				pendingText = '';
+			if (isVoice && pendingText.value) {
+				await handleVoiceOutput(streamController, pendingText.value);
 			}
 
 			const finalMessage = await finalResult;
@@ -283,6 +161,7 @@ const callAgent = createStep({
 				usage: stream.usage,
 			};
 
+			// Emit a progress update to the frontend to indicate that the workflow is complete
 			streamJSONEvent(streamController, {
 				type: 'progress_update',
 				state: 'complete',
@@ -317,7 +196,6 @@ export const emailWorkflow = createWorkflow({
 	inputSchema: ChatInputSchema,
 	outputSchema: ChatOutputSchema,
 })
-	.then(fetchContext)
-	.then(buildAgentContext)
+	.then(prepareAgentContext)
 	.then(callAgent)
 	.commit();
