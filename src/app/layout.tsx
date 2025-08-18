@@ -2,7 +2,6 @@
 
 import { ReactNode, useMemo, useState, memo } from 'react';
 import { CedarCopilot } from 'cedar-os';
-import type { ProviderConfig } from 'cedar-os';
 
 import { Mail } from 'lucide-react';
 import { Header } from './layout/Header';

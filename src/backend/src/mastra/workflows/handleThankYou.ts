@@ -1,12 +1,8 @@
 import { Context } from 'hono';
 import { createSSEStream, streamJSONEvent } from '../../utils/streamUtils';
-import { extractChatInput } from './sharedUtils';
 
 export async function handleThankYou(c: Context) {
 	try {
-		const body = await c.req.json();
-		const inputData = extractChatInput(body);
-
 		return createSSEStream(async (controller) => {
 			// Simulate streaming response for thank you
 			streamJSONEvent(controller, {
