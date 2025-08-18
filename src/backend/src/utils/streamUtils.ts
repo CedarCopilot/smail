@@ -1,5 +1,6 @@
 import { StreamTextResult } from 'ai';
 import type { Readable } from 'stream';
+import { streamJSONEvent } from '../mastra/workflows/handleCustomStream';
 
 // ------------------- Functions for Data-Only SSE Format -------------------
 
@@ -41,19 +42,6 @@ export function createSSEStream(
 			Connection: 'keep-alive',
 		},
 	});
-}
-
-/**
- * Emit any JSON object as a data event.
- * Used for actions, tool responses, custom events, etc.
- */
-export function streamJSONEvent<T>(
-	controller: ReadableStreamDefaultController<Uint8Array>,
-	eventData: T
-) {
-	const encoder = new TextEncoder();
-	controller.enqueue(encoder.encode('data: '));
-	controller.enqueue(encoder.encode(`${JSON.stringify(eventData)}\n\n`));
 }
 
 /**
@@ -116,10 +104,8 @@ export async function streamAudioFromText(
 		}
 		audioResponse = Buffer.concat(chunks);
 	}
-
-	// Emit audio event to the stream
 	streamJSONEvent(controller, {
-		type: eventType,
+		type: eventType as 'audio',
 		audioData: audioResponse.toString('base64'),
 		audioFormat: 'audio/mpeg',
 		content: text,

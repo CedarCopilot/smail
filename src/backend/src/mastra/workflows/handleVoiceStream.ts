@@ -1,6 +1,7 @@
 import { Context } from 'hono';
 import { Readable } from 'stream';
-import { createSSEStream, streamJSONEvent } from '../../utils/streamUtils';
+import { createSSEStream } from '../../utils/streamUtils';
+import { streamJSONEvent } from './handleCustomStream';
 import { emailWorkflow } from './emailWorkflow';
 import { createWorkflowInput } from './sharedUtils';
 import { voiceProvider } from './voiceUtils';

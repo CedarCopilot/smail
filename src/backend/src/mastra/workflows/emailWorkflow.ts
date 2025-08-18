@@ -6,7 +6,7 @@
 import { createWorkflow, createStep } from '@mastra/core/workflows';
 import { z } from 'zod';
 import { emailAgent } from '../agents/emailAgent';
-import { streamJSONEvent } from '../../utils/streamUtils';
+import { streamJSONEvent } from './handleCustomStream';
 import {
 	handleTextDelta,
 	handleToolCall,
