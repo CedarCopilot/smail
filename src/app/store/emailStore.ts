@@ -166,7 +166,7 @@ const generateMockEmails = (): Email[] => {
 		from: {
 			email: 'avery.chen@gmail.com',
 			name: 'Avery Chen',
-			avatar: 'https://i.pravatar.cc/150?u=avery',
+			avatar: 'https://i.pravatar.cc/150?u=jane',
 		},
 		to: [{ email: 'me@gmail.com', name: 'Me' }],
 		subject: 'Meeting Request - Project Sync',
