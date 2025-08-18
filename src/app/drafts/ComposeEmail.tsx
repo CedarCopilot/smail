@@ -51,14 +51,28 @@ export function ComposeEmail({ draftId, inline = false }: ComposeEmailProps) {
 		() => ({
 			draftReply: {
 				name: 'draftReply',
-				description: 'Set the current email draft body to the provided string.',
+				description:
+					'Set the current email draft body and optionally the subject.',
 				parameters: [
 					{ name: 'draft', type: 'string', description: 'Email body content' },
+					{
+						name: 'subject',
+						type: 'string',
+						description: 'Email subject (optional)',
+						optional: true,
+					},
 				],
 				execute: (_current: Partial<ComposeEmailData>, ...args: unknown[]) => {
 					const setCedarState = useCedarStore.getState().setCedarState;
 					const draftBody = String(args[0] ?? '');
-					setCedarState('emailDraft', { body: draftBody });
+					const draftSubject = args[1] ? String(args[1]) : undefined;
+
+					const draftData: Partial<ComposeEmailData> = { body: draftBody };
+					if (draftSubject !== undefined) {
+						draftData.subject = draftSubject;
+					}
+
+					setCedarState('emailDraft', draftData);
 				},
 			},
 		}),

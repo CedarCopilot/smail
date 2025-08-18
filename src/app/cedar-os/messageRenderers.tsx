@@ -6,6 +6,8 @@ import {
 	Message,
 } from 'cedar-os';
 import TodoList from '@/app/cedar-os/components/chatMessages/TodoList';
+import Flat3dContainer from '@/app/cedar-os/components/containers/Flat3dContainer';
+import { Check, CheckCircle, Circle } from 'lucide-react';
 
 type SearchPersonToolResultPayload = {
 	toolCallId: string;
@@ -88,12 +90,12 @@ function extractQuery(args: unknown): string {
 }
 
 const toolCallPhrases: Record<string, (payload: ToolCallPayload) => string> = {
-	checkCalendarTool: () => 'Checking your calendar...',
+	checkCalendarTool: () => 'Check calendar for available times',
 	searchPersonTool: (payload) => {
 		const query = extractQuery(payload.args);
-		return query ? `Searching for ${query}` : 'Searching for conversations...';
+		return query ? `Search for ${query}` : 'Search for conversations';
 	},
-	writeEmailTool: () => 'Writing response email...',
+	writeEmailTool: () => 'Write response email',
 };
 
 export const toolCallMessageRenderer: MessageRenderer<CustomToolCallMessage> = {
@@ -103,20 +105,30 @@ export const toolCallMessageRenderer: MessageRenderer<CustomToolCallMessage> = {
 		const toolName = toolPayload.toolName || '';
 		const phraseResolver = toolCallPhrases[toolName];
 		const text = phraseResolver ? phraseResolver(toolPayload) : 'Working...';
-		return (
-			<TodoList
-				message={{
-					items: [
-						{
-							text: text,
-							done: (message.metadata?.complete as boolean) ?? false,
-						},
-					],
-					...message,
-					type: 'todolist',
-				}}
-			/>
-		);
+		const completed = (message.metadata?.complete as boolean) ?? false;
+		if (completed === true) {
+			return (
+				<Flat3dContainer className='p-3 opacity-50 my-2'>
+					<div className='flex flex-row items-center justify-between w-full'>
+						<div className='text-sm font-medium line-through text-gray-500'>
+							{text}
+						</div>
+						<CheckCircle size={16} className='text-green-700' />
+					</div>
+				</Flat3dContainer>
+			);
+		}
+
+		if (completed === false) {
+			return (
+				<Flat3dContainer className='p-3 my-2'>
+					<div className='flex flex-row items-center justify-between w-full'>
+						<div className='text-sm font-medium'>{text}</div>
+						<Circle size={16} className='text-gray-500' />
+					</div>
+				</Flat3dContainer>
+			);
+		}
 	},
 };
 
@@ -184,17 +196,6 @@ export const toolResultMessageRenderer: MessageRenderer<CustomToolMessage> = {
 				</div>
 			);
 		}
-
-		// Fallback: show raw content/payload
-		return (
-			<div className='text-sm'>
-				<pre className='whitespace-pre-wrap'>
-					{typeof message.content === 'string'
-						? message.content
-						: JSON.stringify(message.payload, null, 2)}
-				</pre>
-			</div>
-		);
 	},
 };
 
@@ -208,7 +209,14 @@ export const actionResultMessageRenderer: MessageRenderer<ActionResultMessage> =
 	{
 		type: 'action',
 		render: (message) => {
-			return <div>Drafted email: {message.args[0].slice(0, 100) + '...'}</div>;
+			switch (message.setterKey) {
+				case 'draftReply':
+					return (
+						<div>Drafted email: {message.args[0].slice(0, 100) + '...'}</div>
+					);
+				default:
+					return <div>Executed setter: {message.setterKey}</div>;
+			}
 		},
 	};
 

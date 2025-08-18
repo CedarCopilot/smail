@@ -242,6 +242,7 @@ const callAgent = createStep({
 						if (toolName === 'writeEmailTool') {
 							const email =
 								(chunk.payload?.result as { email?: string })?.email || '';
+							streamJSONEvent(streamController, chunk);
 							streamJSONEvent(streamController, {
 								type: 'action',
 								stateKey: 'emailDraft',
