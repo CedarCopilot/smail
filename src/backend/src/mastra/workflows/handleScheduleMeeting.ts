@@ -1,5 +1,6 @@
 import { Context } from 'hono';
-import { createSSEStream, streamJSONEvent } from '../../utils/streamUtils';
+import { createSSEStream } from '../../utils/streamUtils';
+import { streamJSONEvent } from './handleCustomStream';
 
 export async function handleScheduleMeeting(c: Context) {
 	try {

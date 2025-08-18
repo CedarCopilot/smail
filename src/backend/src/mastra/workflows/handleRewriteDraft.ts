@@ -1,6 +1,7 @@
 import { Context } from 'hono';
 import { z } from 'zod';
-import { createSSEStream, streamJSONEvent } from '../../utils/streamUtils';
+import { createSSEStream } from '../../utils/streamUtils';
+import { streamJSONEvent } from './handleCustomStream';
 import { rewriteAgent } from '../agents/rewriteAgent';
 
 export async function handleRewriteDraft(c: Context) {
