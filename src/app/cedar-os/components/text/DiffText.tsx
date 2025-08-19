@@ -1,13 +1,14 @@
 import React, { useEffect } from 'react';
 import { animate, motion, useMotionValue } from 'motion/react';
-import { diffWords, diffChars } from 'diff';
+import { diffWords, diffChars, diffLines } from 'diff';
 
 // TypewriterText component for animated text appearance
 const TypewriterText: React.FC<{
 	text: string;
 	color: string;
 	backgroundColor: string;
-}> = ({ text, color, backgroundColor }) => {
+	diffMode?: 'words' | 'chars' | 'lines';
+}> = ({ text, color, backgroundColor, diffMode }) => {
 	const motionText = useMotionValue('');
 
 	useEffect(() => {
@@ -21,6 +22,35 @@ const TypewriterText: React.FC<{
 
 		return () => animation.stop();
 	}, [text, motionText]);
+
+	// Handle multiline text for line mode
+	if (diffMode === 'lines' && text.includes('\n')) {
+		const lines = text.split('\n');
+		return (
+			<>
+				{lines.map((line, index) => (
+					<React.Fragment key={index}>
+						{line && (
+							<motion.span
+								className='relative'
+								style={{
+									backgroundColor,
+									color,
+									borderRadius: '2px',
+									padding: '0 2px',
+									textDecoration: 'none',
+								}}>
+								<motion.span style={{ whiteSpace: 'pre-wrap' }}>
+									{line}
+								</motion.span>
+							</motion.span>
+						)}
+						{index < lines.length - 1 && <br />}
+					</React.Fragment>
+				))}
+			</>
+		);
+	}
 
 	return (
 		<motion.span
@@ -40,7 +70,8 @@ const TypewriterText: React.FC<{
 // StrikethroughText component for removed text (no fade out)
 const StrikethroughText: React.FC<{
 	text: string;
-}> = ({ text }) => {
+	diffMode?: 'words' | 'chars' | 'lines';
+}> = ({ text, diffMode }) => {
 	const strikethrough = useMotionValue(0);
 
 	useEffect(() => {
@@ -55,32 +86,69 @@ const StrikethroughText: React.FC<{
 		};
 	}, [strikethrough]);
 
-	return (
-		<motion.span
-			className='relative inline-block'
-			style={{
-				backgroundColor: 'rgba(239, 68, 68, 0.2)',
-				color: 'rgba(239, 68, 68, 0.9)',
-				borderRadius: '2px',
-				padding: '0 2px',
-			}}>
-			<span style={{ whiteSpace: 'pre-wrap' }}>{text}</span>
-			<motion.div
-				className='absolute top-1/2 left-0 right-0 h-[1px] bg-red-500'
+	// Split text by lines if it contains newlines
+	const lines = text.split('\n');
+
+	// If it's a single line or no newlines, render as before
+	if (lines.length === 1) {
+		return (
+			<motion.span
+				className='relative inline-block'
 				style={{
-					scaleX: strikethrough,
-					transformOrigin: 'left center',
-					transform: 'translateY(-50%)',
-				}}
-			/>
-		</motion.span>
+					backgroundColor: 'rgba(239, 68, 68, 0.2)',
+					color: 'rgba(239, 68, 68, 0.9)',
+					borderRadius: '2px',
+					padding: '0 2px',
+				}}>
+				<span style={{ whiteSpace: 'pre-wrap' }}>{text}</span>
+				<motion.div
+					className='absolute top-1/2 left-0 right-0 h-[1px] bg-red-500'
+					style={{
+						scaleX: strikethrough,
+						transformOrigin: 'left center',
+						transform: 'translateY(-50%)',
+					}}
+				/>
+			</motion.span>
+		);
+	}
+
+	// For multiline text, render each line with its own strikethrough
+	return (
+		<>
+			{lines.map((line, index) => (
+				<React.Fragment key={index}>
+					{line && (
+						<motion.span
+							className='relative inline-block'
+							style={{
+								backgroundColor: 'rgba(239, 68, 68, 0.2)',
+								color: 'rgba(239, 68, 68, 0.9)',
+								borderRadius: '2px',
+								padding: '0 2px',
+							}}>
+							<span style={{ whiteSpace: 'pre-wrap' }}>{line}</span>
+							<motion.div
+								className='absolute top-1/2 left-0 right-0 h-[1px] bg-red-500'
+								style={{
+									scaleX: strikethrough,
+									transformOrigin: 'left center',
+									transform: 'translateY(-50%)',
+								}}
+							/>
+						</motion.span>
+					)}
+					{index < lines.length - 1 && (diffMode === 'lines' ? <br /> : '\n')}
+				</React.Fragment>
+			))}
+		</>
 	);
 };
 
 interface DiffTextProps {
 	oldText: string;
 	newText: string;
-	diffMode?: 'words' | 'chars';
+	diffMode?: 'words' | 'chars' | 'lines';
 	showRemoved?: boolean;
 	animateChanges?: boolean;
 	className?: string;
@@ -95,8 +163,14 @@ export const DiffText: React.FC<DiffTextProps> = ({
 	className = '',
 }) => {
 	// Use the appropriate diff function based on mode
-	const diffFunction = diffMode === 'chars' ? diffChars : diffWords;
-	const changes = diffFunction(oldText, newText);
+	let changes;
+	if (diffMode === 'chars') {
+		changes = diffChars(oldText, newText);
+	} else if (diffMode === 'lines') {
+		changes = diffLines(oldText, newText, {});
+	} else {
+		changes = diffWords(oldText, newText);
+	}
 
 	return (
 		<span className={className}>
@@ -109,40 +183,118 @@ export const DiffText: React.FC<DiffTextProps> = ({
 							text={part.value}
 							color='rgb(34, 197, 94)'
 							backgroundColor='rgba(34, 197, 94, 0.15)'
+							diffMode={diffMode}
 						/>
 					) : (
-						<span
-							key={`added-${index}`}
-							style={{
-								backgroundColor: 'rgba(34, 197, 94, 0.15)',
-								color: 'rgb(34, 197, 94)',
-								borderRadius: '2px',
-								padding: '0 2px',
-							}}>
-							{part.value}
-						</span>
+						// Handle multiline added text for non-animated case
+						(() => {
+							if (diffMode === 'lines' && part.value.includes('\n')) {
+								const lines = part.value.split('\n');
+								return (
+									<React.Fragment key={`added-${index}`}>
+										{lines.map((line, lineIndex) => (
+											<React.Fragment key={lineIndex}>
+												{line && (
+													<span
+														style={{
+															backgroundColor: 'rgba(34, 197, 94, 0.15)',
+															color: 'rgb(34, 197, 94)',
+															borderRadius: '2px',
+															padding: '0 2px',
+														}}>
+														{line}
+													</span>
+												)}
+												{lineIndex < lines.length - 1 && <br />}
+											</React.Fragment>
+										))}
+									</React.Fragment>
+								);
+							}
+
+							return (
+								<span
+									key={`added-${index}`}
+									style={{
+										backgroundColor: 'rgba(34, 197, 94, 0.15)',
+										color: 'rgb(34, 197, 94)',
+										borderRadius: '2px',
+										padding: '0 2px',
+									}}>
+									{part.value}
+								</span>
+							);
+						})()
 					);
 				} else if (part.removed) {
 					// Removed text - red with strikethrough (no fade)
 					if (!showRemoved) return null;
 
 					return animateChanges ? (
-						<StrikethroughText key={`removed-${index}`} text={part.value} />
-					) : (
-						<span
+						<StrikethroughText
 							key={`removed-${index}`}
-							style={{
-								backgroundColor: 'rgba(239, 68, 68, 0.15)',
-								color: 'rgba(239, 68, 68, 0.7)',
-								borderRadius: '2px',
-								padding: '0 2px',
-								textDecoration: 'line-through',
-							}}>
-							{part.value}
-						</span>
+							text={part.value}
+							diffMode={diffMode}
+						/>
+					) : (
+						// Handle multiline removed text for non-animated case
+						(() => {
+							const lines = part.value.split('\n');
+							if (lines.length === 1) {
+								return (
+									<span
+										key={`removed-${index}`}
+										style={{
+											backgroundColor: 'rgba(239, 68, 68, 0.15)',
+											color: 'rgba(239, 68, 68, 0.7)',
+											borderRadius: '2px',
+											padding: '0 2px',
+											textDecoration: 'line-through',
+										}}>
+										{part.value}
+									</span>
+								);
+							}
+
+							return (
+								<React.Fragment key={`removed-${index}`}>
+									{lines.map((line, lineIndex) => (
+										<React.Fragment key={lineIndex}>
+											{line && (
+												<span
+													style={{
+														backgroundColor: 'rgba(239, 68, 68, 0.15)',
+														color: 'rgba(239, 68, 68, 0.7)',
+														borderRadius: '2px',
+														padding: '0 2px',
+														textDecoration: 'line-through',
+													}}>
+													{line}
+												</span>
+											)}
+											{lineIndex < lines.length - 1 &&
+												(diffMode === 'lines' ? <br /> : '\n')}
+										</React.Fragment>
+									))}
+								</React.Fragment>
+							);
+						})()
 					);
 				} else {
-					// Unchanged text
+					// Unchanged text - handle line mode
+					if (diffMode === 'lines' && part.value.includes('\n')) {
+						const lines = part.value.split('\n');
+						return (
+							<React.Fragment key={`unchanged-${index}`}>
+								{lines.map((line, lineIndex) => (
+									<React.Fragment key={lineIndex}>
+										{line}
+										{lineIndex < lines.length - 1 && <br />}
+									</React.Fragment>
+								))}
+							</React.Fragment>
+						);
+					}
 					return <span key={`unchanged-${index}`}>{part.value}</span>;
 				}
 			})}
