@@ -172,9 +172,42 @@ export const DiffText: React.FC<DiffTextProps> = ({
 		changes = diffWords(oldText, newText);
 	}
 
+	// Reorder changes to show added before removed when they're consecutive
+	const reorderedChanges = [];
+	let i = 0;
+
+	while (i < changes.length) {
+		const current = changes[i];
+
+		// If current is added or removed, look ahead for consecutive add/remove pairs
+		if (current.added || current.removed) {
+			const group = [];
+			let j = i;
+
+			// Collect consecutive added/removed changes
+			while (j < changes.length && (changes[j].added || changes[j].removed)) {
+				group.push(changes[j]);
+				j++;
+			}
+
+			// Separate added and removed from the group
+			const addedChanges = group.filter((change) => change.added);
+			const removedChanges = group.filter((change) => change.removed);
+
+			// Add them in order: added first, then removed
+			reorderedChanges.push(...addedChanges, ...removedChanges);
+
+			i = j; // Move to next non-add/remove change
+		} else {
+			// Unchanged text, add as-is
+			reorderedChanges.push(current);
+			i++;
+		}
+	}
+
 	return (
 		<span className={className}>
-			{changes.map((part, index) => {
+			{reorderedChanges.map((part, index) => {
 				if (part.added) {
 					// Added text - green with typewriter effect
 					return animateChanges ? (
